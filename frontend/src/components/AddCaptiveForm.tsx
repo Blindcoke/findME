@@ -1,0 +1,277 @@
+// components/AddCaptiveForm.tsx
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Textarea } from "./ui/textarea";
+import { Calendar } from "./ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "../lib/utils";
+import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { useState } from "react";
+import { csrfToken } from "../csrf";
+import { useLocation } from "react-router-dom";
+
+interface AddCaptiveFormProps {
+  formType?: 'informed' | 'searching';
+}
+
+const formSchema = z.object({
+  name: z.string().optional(),
+  picture: z.instanceof(File).optional(),
+  person_type: z.enum(["military", "civilian"]),
+  brigade: z.string().optional(),
+  date_of_birth: z.date().optional(),
+  region: z.string().optional(),
+  settlement: z.string().optional(),
+  circumstances: z.string().optional(),
+  appearance: z.string().optional(),
+  status: z.enum(['informed', 'searching']),
+});
+
+const formatDate = (date: Date | undefined) => date ? format(date, 'yyyy-MM-dd') : undefined;
+
+export function AddCaptiveForm({ formType: propFormType }: AddCaptiveFormProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Determine form type from props or URL path
+  const pathContext = location.pathname.includes('informated') ? 'informed' : 'searching';
+  const formType = propFormType ?? pathContext;
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      person_type: "civilian",
+      status: formType, // Use determined form type
+    },
+  });
+
+  const personType = form.watch("person_type");
+  const circumstancesLabel = formType === 'informed'
+    ? 'Обставини за яких було отримано інформацію'
+    : 'Обставини за яких людина зникла';
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    try {
+      setLoading(true);
+      const formData = new FormData();
+
+      Object.entries(values).forEach(([key, value]) => {
+        if (key === "date_of_birth") {
+          const formattedDate = formatDate(value as Date);
+          if (formattedDate) formData.append(key, formattedDate);
+        } else if (value) {
+          formData.append(key, value instanceof File ? value : value.toString());
+        }
+      });
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/captives/`, {
+        method: "POST",
+        headers: { "X-CSRFToken": csrfToken },
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!response.ok) throw new Error('Submission failed');
+      navigate(formType === 'informed' ? "/informated" : "/searching");
+    } catch (err) {
+      setError("Failed to submit form. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold text-emerald-100 mb-8">
+        {formType === 'informed'
+          ? 'Надіслати інформацію про особу'
+          : 'Зареєструвати зниклу особу'}
+      </h1>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <input type="hidden" {...form.register('status')} />
+
+          {/* Personal Information Section */}
+          <div className="bg-emerald-900/30 backdrop-blur-lg rounded-2xl p-6 shadow-xl space-y-6">
+            <h2 className="text-xl font-semibold text-emerald-200">Основна інформація</h2>
+
+            <FormField control={form.control} name="picture" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-emerald-300">Фото</FormLabel>
+                <FormControl>
+                  <Input
+                    type="file"
+                    onChange={(e) => field.onChange(e.target.files?.[0])}
+                    className="bg-emerald-800/20 border-2 border-emerald-600 text-emerald-100 file:text-emerald-100"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="name" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-emerald-300">Ім'я</FormLabel>
+                <FormControl>
+                  <Input {...field} className="bg-emerald-800/20 border-2 border-emerald-600 text-emerald-100" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="person_type" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-emerald-300">Тип особи</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="bg-emerald-800/20 border-2 border-emerald-600 text-emerald-100">
+                      <SelectValue placeholder="Оберіть тип особи" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="bg-emerald-800/80 backdrop-blur-lg border-2 border-emerald-600">
+                    <SelectItem value="military" className="hover:bg-emerald-700/50">Військовий</SelectItem>
+                    <SelectItem value="civilian" className="hover:bg-emerald-700/50">Цивільний</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            {personType === 'military' && (
+              <FormField control={form.control} name="brigade" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-emerald-300">Бригада</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="bg-emerald-800/20 border-2 border-emerald-600 text-emerald-100" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            )}
+          </div>
+
+          {/* Details Section */}
+          <div className="bg-emerald-900/30 backdrop-blur-lg rounded-2xl p-6 shadow-xl space-y-6">
+            <h2 className="text-xl font-semibold text-emerald-200">Деталі</h2>
+
+            <FormField control={form.control} name="date_of_birth" render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel className="text-emerald-300">Дата народження</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "bg-emerald-800/20 border-2 border-emerald-600 text-emerald-100 hover:bg-emerald-700/30",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? format(field.value, "dd.MM.yyyy") : <span>Оберіть дату</span>}
+                        <CalendarIcon className="ml-2 h-4 w-4 text-emerald-300" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="bg-emerald-800/80 backdrop-blur-lg border-2 border-emerald-600 w-auto p-0">
+                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="region" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-emerald-300">Область</FormLabel>
+                <FormControl>
+                  <Input {...field} className="bg-emerald-800/20 border-2 border-emerald-600 text-emerald-100" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="settlement" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-emerald-300">Населений пункт</FormLabel>
+                <FormControl>
+                  <Input {...field} className="bg-emerald-800/20 border-2 border-emerald-600 text-emerald-100" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </div>
+
+          {/* Additional Information Section */}
+          <div className="bg-emerald-900/30 backdrop-blur-lg rounded-2xl p-6 shadow-xl space-y-6">
+            <h2 className="text-xl font-semibold text-emerald-200">Додаткова інформація</h2>
+
+            <FormField control={form.control} name="circumstances" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-emerald-300">{circumstancesLabel}</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    className="bg-emerald-800/20 border-2 border-emerald-600 text-emerald-100 min-h-[100px]"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="appearance" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-emerald-300">Опис зовнішності</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    className="bg-emerald-800/20 border-2 border-emerald-600 text-emerald-100 min-h-[100px]"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </div>
+
+          {error && <div className="text-red-400 text-center">{error}</div>}
+
+          <div className="flex gap-4 justify-end">
+            <Button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="bg-emerald-800/30 hover:bg-emerald-700/40 border-2 border-emerald-600 text-emerald-100"
+            >
+              Скасувати
+            </Button>
+            <Button
+              type="submit"
+              className={cn(
+                "bg-gradient-to-r text-white",
+                formType === 'informed'
+                  ? "from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500"
+                  : "from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500"
+              )}
+              disabled={loading}
+            >
+              {loading ? "Збереження..." : formType === 'informed'
+                ? "Надіслати інформацію"
+                : "Зареєструвати зниклу особу"}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
+  );
+}
+
+export default AddCaptiveForm;

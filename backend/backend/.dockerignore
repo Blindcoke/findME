@@ -1,0 +1,8 @@
+# Exclude everything except needed files
+*
+!Dockerfile
+!requirements.txt
+!manage.py
+!backend/
+!*.py
+!.env

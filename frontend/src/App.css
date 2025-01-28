@@ -1,0 +1,12 @@
+pre:has(code.mermaid) {
+  background-color: #f9f9f9; /* gray-50 */
+}
+
+.dark pre:has(code.mermaid) {
+  background-color: initial;
+}
+
+.mask-gradient {
+  mask-image: linear-gradient(to right, black 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
+}
