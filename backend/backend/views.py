@@ -140,33 +140,28 @@ class AppearanceSearchView(APIView):
 
     def _search(self, description):
         try:
-            # Get embedding from OpenAI
             embedding_response = async_to_sync(openai_client.embeddings.create)(
                 input=[description], model="text-embedding-3-small"
             )
             query_embedding = np.array(embedding_response.data[0].embedding)
 
             results = []
-            # Get all captives with non-null embeddings at once
             captives = Captive.objects.exclude(appearance_embedded__isnull=True)
 
             for captive in captives:
                 try:
-                    # Parse the vector string more carefully
                     vector_string = captive.appearance_embedded.strip("{}")
                     if not vector_string:
                         continue
 
                     captive_embedding = np.fromstring(vector_string, sep=",")
 
-                    # Check vector dimensions match
                     if captive_embedding.shape != query_embedding.shape:
                         logger.warning(
                             f"Vector shape mismatch for captive {captive.id}: {captive_embedding.shape} vs {query_embedding.shape}"
                         )
                         continue
 
-                    # Calculate cosine similarity
                     norm_query = np.linalg.norm(query_embedding)
                     norm_captive = np.linalg.norm(captive_embedding)
 
@@ -191,7 +186,6 @@ class AppearanceSearchView(APIView):
                 c._similarity = sim
 
             sorted_captives = [c for _, c in top_matches]
-            # Pass the request context to the serializer
             serializer = CaptiveSerializer(
                 sorted_captives, many=True, context={"request": self.request}
             )
