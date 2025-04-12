@@ -35,7 +35,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true); // Start loading spinner
+    setLoading(true); 
     try {
       const response = await fetch("http://localhost:8000/login/", {
         method: "POST",
@@ -90,7 +90,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             id="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full px-4 py-2 rounded-lg focus:outline-none"
+            className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
             required
             disabled={loading}
           />
@@ -104,14 +104,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             id="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 rounded-lg focus:outline-none"
+            className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
             required
             disabled={loading}
           />
         </div>
         <button
           type="submit"
-          className={`w-full ${
+          className={`w-full border-0 ${
             loading ? "bg-yellow-600" : "bg-yellow-500 hover:bg-yellow-600"
           } text-black font-medium px-4 py-2 rounded-lg`}
           disabled={loading}

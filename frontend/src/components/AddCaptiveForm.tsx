@@ -18,8 +18,10 @@ import { csrfToken } from "../csrf";
 import { useLocation } from "react-router-dom";
 
 interface AddCaptiveFormProps {
-  formType?: 'informed' | 'searching';
+  formType?: 'informed' | 'searching' | 'archive';
 }
+
+const statusEnum = z.enum(['informed', 'searching', 'deceased', 'reunited']);
 
 const formSchema = z.object({
   name: z.string().optional(),
@@ -31,7 +33,7 @@ const formSchema = z.object({
   settlement: z.string().optional(),
   circumstances: z.string().optional(),
   appearance: z.string().optional(),
-  status: z.enum(['informed', 'searching']),
+  status: statusEnum,
 });
 
 const formatDate = (date: Date | undefined) => date ? format(date, 'yyyy-MM-dd') : undefined;
@@ -41,7 +43,14 @@ export function AddCaptiveForm({ formType: propFormType }: AddCaptiveFormProps) 
   const location = useLocation();
 
   // Determine form type from props or URL path
-  const pathContext = location.pathname.includes('informated') ? 'informed' : 'searching';
+  const pathContext = location.pathname.includes('informated') 
+    ? 'informed' 
+    : location.pathname.includes('searching') 
+    ? 'searching' 
+    : location.pathname.includes('archive') 
+    ? 'archive' 
+    : 'informed';
+
   const formType = propFormType ?? pathContext;
 
   const [loading, setLoading] = useState(false);
@@ -51,14 +60,16 @@ export function AddCaptiveForm({ formType: propFormType }: AddCaptiveFormProps) 
     resolver: zodResolver(formSchema),
     defaultValues: {
       person_type: "civilian",
-      status: formType, // Use determined form type
+      status: formType === 'archive' ? undefined : formType,
     },
   });
 
   const personType = form.watch("person_type");
-  const circumstancesLabel = formType === 'informed'
-    ? 'Обставини за яких було отримано інформацію'
-    : 'Обставини за яких людина зникла';
+  const circumstancesLabel = {
+    informed: 'Обставини за яких було отримано інформацію',
+    searching: 'Обставини за яких людина зникла',
+    archive: 'Обставини загибелі або возз’єднання'
+  }[formType];
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -82,9 +93,15 @@ export function AddCaptiveForm({ formType: propFormType }: AddCaptiveFormProps) 
       });
 
       if (!response.ok) throw new Error('Submission failed');
-      navigate(formType === 'informed' ? "/informated" : "/searching");
+      
+      navigate({
+        informed: "/informated",
+        searching: "/searching",
+        archive: "/archive"
+      }[formType]);
     } catch (err) {
-      setError("Failed to submit form. Please try again.");
+      console.log(err);
+      setError("Не вдалося відправити форму. Будь ласка, спробуйте ще раз.");
     } finally {
       setLoading(false);
     }
@@ -93,14 +110,44 @@ export function AddCaptiveForm({ formType: propFormType }: AddCaptiveFormProps) 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-emerald-100 mb-8">
-        {formType === 'informed'
-          ? 'Надіслати інформацію про особу'
-          : 'Зареєструвати зниклу особу'}
+        {{
+          informed: 'Надіслати інформацію про особу',
+          searching: 'Зареєструвати зниклу особу',
+          archive: 'Додати особу до архіву'
+        }[formType]}
       </h1>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <input type="hidden" {...form.register('status')} />
+          {formType !== 'archive' && (
+            <input type="hidden" {...form.register('status')} />
+          )}
+
+          {formType === 'archive' && (
+            <div className="bg-emerald-900/30 backdrop-blur-lg rounded-2xl p-6 shadow-xl space-y-6">
+              <FormField control={form.control} name="status" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-emerald-300">Статус</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="bg-emerald-800/20 border-2 border-emerald-600 text-emerald-100">
+                        <SelectValue placeholder="Оберіть статус" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-emerald-800/80 backdrop-blur-lg border-2 border-emerald-600">
+                      <SelectItem value="deceased" className="hover:bg-emerald-700/50 text-white">
+                        Загиблий
+                      </SelectItem>
+                      <SelectItem value="reunited" className="hover:bg-emerald-700/50 text-white">
+                        Возз’єднаний
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}/>
+            </div>
+          )}
 
           {/* Personal Information Section */}
           <div className="bg-emerald-900/30 backdrop-blur-lg rounded-2xl p-6 shadow-xl space-y-6">
@@ -140,8 +187,8 @@ export function AddCaptiveForm({ formType: propFormType }: AddCaptiveFormProps) 
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent className="bg-emerald-800/80 backdrop-blur-lg border-2 border-emerald-600">
-                    <SelectItem value="military" className="hover:bg-emerald-700/50">Військовий</SelectItem>
-                    <SelectItem value="civilian" className="hover:bg-emerald-700/50">Цивільний</SelectItem>
+                    <SelectItem value="military" className="hover:bg-emerald-700/50 text-white">Військовий</SelectItem>
+                    <SelectItem value="civilian" className="hover:bg-emerald-700/50 text-white">Цивільний</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -174,11 +221,11 @@ export function AddCaptiveForm({ formType: propFormType }: AddCaptiveFormProps) 
                       <Button
                         variant="outline"
                         className={cn(
-                          "bg-emerald-800/20 border-2 border-emerald-600 text-emerald-100 hover:bg-emerald-700/30",
+                          "bg-emerald-800/20 border-2 border-emerald-600 text-emerald-100 hover:bg-emerald-700/30 hover:border-yellow-500",
                           !field.value && "text-muted-foreground"
                         )}
                       >
-                        {field.value ? format(field.value, "dd.MM.yyyy") : <span>Оберіть дату</span>}
+                        {field.value ? format(field.value, "dd.MM.yyyy") : <span className="text-yellow-500">Оберіть дату</span>}
                         <CalendarIcon className="ml-2 h-4 w-4 text-emerald-300" />
                       </Button>
                     </FormControl>
@@ -249,23 +296,25 @@ export function AddCaptiveForm({ formType: propFormType }: AddCaptiveFormProps) 
             <Button
               type="button"
               onClick={() => navigate(-1)}
-              className="bg-emerald-800/30 hover:bg-emerald-700/40 border-2 border-emerald-600 text-emerald-100"
+              className="bg-gradient-to-r from-green-500 to-yellow-600 hover:from-green-400 hover:to-yellow-500 border-emerald-600 text-emerald-100 border-0"
             >
               Скасувати
             </Button>
             <Button
               type="submit"
               className={cn(
-                "bg-gradient-to-r text-white",
-                formType === 'informed'
-                  ? "from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500"
-                  : "from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500"
+                "bg-gradient-to-r text-white  border-0",
+                formType === 'informed' ? "from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500" :
+                formType === 'searching' ? "from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500" :
+                "from-blue-600 to-teal-600 hover:from-blue-500 hover:to-teal-500"
               )}
               disabled={loading}
             >
-              {loading ? "Збереження..." : formType === 'informed'
-                ? "Надіслати інформацію"
-                : "Зареєструвати зниклу особу"}
+              {loading ? "Збереження..." : {
+                informed: "Надіслати інформацію",
+                searching: "Зареєструвати зниклу особу",
+                archive: "Додати до архіву"
+              }[formType]}
             </Button>
           </div>
         </form>
@@ -273,5 +322,4 @@ export function AddCaptiveForm({ formType: propFormType }: AddCaptiveFormProps) 
     </div>
   );
 }
-
 export default AddCaptiveForm;

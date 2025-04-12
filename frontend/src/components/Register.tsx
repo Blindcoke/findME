@@ -26,7 +26,7 @@ const Register = () => {
 
     const showNotification = (type: 'error' | 'success', message: string) => {
         setNotification({ type, message });
-        setTimeout(() => setNotification(null), 5000); // Hide after 5 seconds
+        setTimeout(() => setNotification(null), 5000);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -36,8 +36,8 @@ const Register = () => {
             return;
         }
 
-        try {
-            const response = await fetch("http://localhost:8000/register/", {
+        try {                
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/register/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -98,7 +98,7 @@ const Register = () => {
                     value={formData.first_name}
                     onChange={handleChange}
                     required
-                    className="w-full mb-4 px-4 py-2 border rounded"
+                    className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
                 />
                 <input
                     type="text"
@@ -107,7 +107,7 @@ const Register = () => {
                     value={formData.last_name}
                     onChange={handleChange}
                     required
-                    className="w-full mb-4 px-4 py-2 border rounded"
+                    className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
                 />
                 <input
                     type="email"
@@ -116,7 +116,7 @@ const Register = () => {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="w-full mb-4 px-4 py-2 border rounded"
+                    className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
                 />
                 <input
                     type="text"
@@ -125,7 +125,7 @@ const Register = () => {
                     value={formData.username}
                     onChange={handleChange}
                     required
-                    className="w-full mb-4 px-4 py-2 border rounded"
+                    className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
                 />
                 <input
                     type="password"
@@ -134,7 +134,7 @@ const Register = () => {
                     value={formData.password}
                     onChange={handleChange}
                     required
-                    className="w-full mb-4 px-4 py-2 border rounded"
+                    className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
                 />
                 <input
                     type="password"
@@ -143,7 +143,7 @@ const Register = () => {
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     required
-                    className="w-full mb-4 px-4 py-2 border rounded"
+                    className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
                 />
                 <button
                     type="submit"

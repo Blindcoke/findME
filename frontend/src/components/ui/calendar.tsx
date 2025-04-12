@@ -41,7 +41,7 @@ function Calendar({
         ),
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal bg-emerald-800/50 text-emerald-200 hover:bg-emerald-700/50"
+          "h-9 w-9 p-0 font-normal bg-emerald-800/50 text-emerald-200 hover:bg-emerald-700/50 hover:border-emerald-600"
         ),
         day_range_start: "day-range-start bg-emerald-600 text-white",
         day_range_end: "day-range-end bg-emerald-600 text-white",

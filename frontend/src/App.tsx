@@ -131,6 +131,8 @@ const App: React.FC = () => {
             />
             <Route path="/register" element={<Register />} />
             <Route path="/settings" element={<UserSettings user={user} refreshUser={refreshUser} />} />
+            <Route path="/searching/:id" element={<CaptiveDetails />} />
+            <Route path="/archive/:id" element={<CaptiveDetails />} />
             <Route path="/informated/:id" element={<CaptiveDetails />} />
             <Route
               path="/informated/add"
@@ -139,6 +141,10 @@ const App: React.FC = () => {
             <Route
               path="/searching/add"
               element={<AddCaptiveForm formType="searching" />}
+            />
+                        <Route
+              path="/archive/add"
+              element={<AddCaptiveForm formType="archive" />}
             />
           </Routes>
         </div>
