@@ -19,9 +19,7 @@ class Captive(models.Model):
     ]
 
     def get_upload_path(instance, filename):
-        # Ensure consistent directory name
         base_dir = Path("captives")
-        # Use instance.id if it exists, otherwise use temp
         if instance.id is None:
             return str(base_dir / "temp" / filename)
         return str(base_dir / str(instance.id) / filename)
@@ -62,28 +60,22 @@ class Captive(models.Model):
             except Captive.DoesNotExist:
                 pass
 
-        # Save the model first to get the ID
         super().save(*args, **kwargs)
 
         if self.picture:
             if is_new or (old_picture_name and old_picture_name != self.picture.name):
-                # Get the current picture path
                 current_path = Path(default_storage.location) / self.picture.name
 
-                # Create the new path
                 new_relative_path = Path("captives") / str(self.id) / current_path.name
                 new_full_path = Path(default_storage.location) / new_relative_path
 
-                # Ensure directory exists
                 new_full_path.parent.mkdir(parents=True, exist_ok=True)
 
-                # Move the file if it exists
                 if current_path.exists():
                     current_path.rename(new_full_path)
                     self.picture.name = str(new_relative_path)
                     super().save(update_fields=["picture"])
 
-                # Clean up temp directory if empty
                 temp_dir = Path(default_storage.location) / "captives" / "temp"
                 if temp_dir.exists() and not any(temp_dir.iterdir()):
                     shutil.rmtree(temp_dir)

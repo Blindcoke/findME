@@ -12,14 +12,10 @@ class FaceDescription(BaseModel):
 
 
 async def create_embedding(text: str, openai_client: AsyncOpenAI) -> list:
-    try:
-        embedding_response = await openai_client.embeddings.create(
-            input=[text], model="text-embedding-3-small"
-        )
-        return embedding_response.data[0].embedding
-    except Exception as e:
-        logger.error(f"Embedding creation error: {e}")
-        return []
+    embedding_response = await openai_client.embeddings.create(
+        input=[text], model="text-embedding-3-small"
+    )
+    return embedding_response.data[0].embedding
 
 
 async def analyze_face(

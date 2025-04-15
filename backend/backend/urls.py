@@ -21,7 +21,7 @@ urlpatterns = [
     path("register/", views.RegisterView.as_view(), name="register"),
     path(
         "appearance_search/",
-        views.AppearanceSearchView.as_view(),
+        views.appearance_search,
         name="appearance_search",
     ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

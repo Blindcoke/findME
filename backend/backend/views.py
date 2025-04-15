@@ -11,12 +11,9 @@ from .serializers import LoginSerializer
 from django.http import JsonResponse
 import django_filters
 from django.db.models import Q
-import numpy as np
-from openai import AsyncOpenAI
-from asgiref.sync import async_to_sync
-import logging
-
-logger = logging.getLogger(__name__)
+from .openai_tools import search, create_embedding
+import json
+import asyncio
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -54,6 +51,14 @@ class CaptiveViewSet(viewsets.ModelViewSet):
     serializer_class = CaptiveSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filterset_class = CaptiveFilter
+
+    def perform_create(self, serializer):
+        instance = serializer.save(user=self.request.user)
+
+        if instance.appearance:
+            embedding = asyncio.run(create_embedding(instance.appearance))
+            instance.appearance_embedded = json.dumps(embedding)
+            instance.save(update_fields=["appearance_embedded"])
 
 
 class LoginView(APIView):
@@ -125,75 +130,24 @@ class MeView(APIView):
         )
 
 
-openai_client = AsyncOpenAI()
-
-
-class AppearanceSearchView(APIView):
-    def post(self, request):
-        description = request.data.get("appearance", "").strip()
+async def appearance_search(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        description = data.get("appearance", "").strip()
         if not description:
-            return Response(
-                {"error": "Empty description"}, status=status.HTTP_400_BAD_REQUEST
+            return JsonResponse(
+                {"error": "Text is required"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        return self._search(description)
-
-    def _search(self, description):
         try:
-            embedding_response = async_to_sync(openai_client.embeddings.create)(
-                input=[description], model="text-embedding-3-small"
-            )
-            query_embedding = np.array(embedding_response.data[0].embedding)
-
-            results = []
-            captives = Captive.objects.exclude(appearance_embedded__isnull=True)
-
-            for captive in captives:
-                try:
-                    vector_string = captive.appearance_embedded.strip("{}")
-                    if not vector_string:
-                        continue
-
-                    captive_embedding = np.fromstring(vector_string, sep=",")
-
-                    if captive_embedding.shape != query_embedding.shape:
-                        logger.warning(
-                            f"Vector shape mismatch for captive {captive.id}: {captive_embedding.shape} vs {query_embedding.shape}"
-                        )
-                        continue
-
-                    norm_query = np.linalg.norm(query_embedding)
-                    norm_captive = np.linalg.norm(captive_embedding)
-
-                    if norm_query == 0 or norm_captive == 0:
-                        similarity = 0
-                    else:
-                        similarity = np.dot(query_embedding, captive_embedding) / (
-                            norm_query * norm_captive
-                        )
-
-                    results.append((similarity, captive))
-                except Exception as inner_e:
-                    logger.warning(
-                        f"Error processing captive {captive.id}: {str(inner_e)}"
-                    )
-                    continue
-
-            results.sort(key=lambda x: x[0], reverse=True)
-            top_matches = results[:5]
-
-            for sim, c in top_matches:
-                c._similarity = sim
-
-            sorted_captives = [c for _, c in top_matches]
-            serializer = CaptiveSerializer(
-                sorted_captives, many=True, context={"request": self.request}
-            )
-            return Response(serializer.data)
+            embedding = await create_embedding(description)
+            search_results = await search(embedding, request)
+            return JsonResponse(search_results, safe=False)
         except Exception as e:
-            import logging
-
-            logging.error(f"Error in appearance search: {str(e)}", exc_info=True)
-            return Response(
+            return JsonResponse(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    return JsonResponse(
+        {"error": "Invalid request method"}, status=status.HTTP_405_METHOD_NOT_ALLOWED
+    )

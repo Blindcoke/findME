@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from ai.appearance import analyze_face
 from ai.extractor import extract_person_info
-
+import json
 
 load_dotenv()
 
@@ -104,7 +104,7 @@ class TelegramScraper:
                 if photo_data:
                     result = await analyze_face(photo_data, self.openai_client)
                     appearance = result.appearance
-                    appearance_embedded = result.embedding
+                    appearance_embedded = json.dumps(result.embedding)
                     self.cursor.execute(
                         """
                         INSERT INTO backend_captive 
@@ -186,7 +186,7 @@ class TelegramScraper:
 
             async for message in self.client.iter_messages(
                 channel,
-                offset_date=datetime.now(tz=timezone.utc) - timedelta(hours=5),
+                offset_date=datetime.now(tz=timezone.utc) - timedelta(hours=10),
                 reverse=True,
                 limit=5,
             ):
