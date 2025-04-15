@@ -8,3 +8,5 @@ psycopg2-binary==2.9.10
 sqlparse==0.5.3
 numpy
 openai
+python-dotenv
+uvicorn
