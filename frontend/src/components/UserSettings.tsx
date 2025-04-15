@@ -150,7 +150,7 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, refreshUser }) => {
                         name="username"
                         value={formData.username}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 rounded-lg focus:outline-none"
+                        className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
                         required
                         disabled={isLoading}
                     />
@@ -166,7 +166,7 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, refreshUser }) => {
                         name="email"
                         value={formData.email}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 rounded-lg focus:outline-none"
+                        className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
                         required
                         disabled={isLoading}
                     />
@@ -182,7 +182,7 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, refreshUser }) => {
                         name="password"
                         value={formData.password}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 rounded-lg focus:outline-none"
+                        className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
                         disabled={isLoading}
                     />
                 </div>

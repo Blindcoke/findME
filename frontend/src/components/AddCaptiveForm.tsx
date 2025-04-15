@@ -1,4 +1,3 @@
-// components/AddCaptiveForm.tsx
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -42,7 +41,6 @@ export function AddCaptiveForm({ formType: propFormType }: AddCaptiveFormProps) 
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Determine form type from props or URL path
   const pathContext = location.pathname.includes('informated') 
     ? 'informed' 
     : location.pathname.includes('searching') 

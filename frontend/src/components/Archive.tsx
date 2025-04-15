@@ -77,6 +77,7 @@ const Archive: React.FC<ArchiveProps> = ({ isAuthenticated }) => {
 
         const data = await response.json();
         setCaptives(data);
+        setOriginalCaptives(data);
         setIsLoading(false);
       } catch (error) {
         console.error("Fetch error:", error);

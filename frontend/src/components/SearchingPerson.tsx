@@ -78,6 +78,7 @@ const SearchingPersons: React.FC<SearchingPersonsProps> = ({ isAuthenticated }) 
 
         const data = await response.json();
         setCaptives(data);
+        setOriginalCaptives(data);
         setIsLoading(false);
       } catch (error) {
         console.error("Fetch error:", error);
