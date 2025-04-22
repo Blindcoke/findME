@@ -1,9 +1,16 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.core.files.storage import default_storage
+from django.conf import settings
 from pathlib import Path
 from django.utils import timezone
 import shutil
+
+
+def get_upload_path(instance, filename):
+    base_dir = Path("captives")
+    if instance.pk is None:
+        return str(base_dir / "temp" / filename)
+    return str(base_dir / str(instance.pk) / filename)
 
 
 class Captive(models.Model):
@@ -17,12 +24,6 @@ class Captive(models.Model):
         ("reunited", "Зустрілися з рідними"),
         ("deceased", "Помер"),
     ]
-
-    def get_upload_path(instance, filename):
-        base_dir = Path("captives")
-        if instance.id is None:
-            return str(base_dir / "temp" / filename)
-        return str(base_dir / str(instance.id) / filename)
 
     name = models.CharField(max_length=100, blank=True, null=True, default="Безіменний")
     picture = models.ImageField(upload_to=get_upload_path, blank=True, null=True)
@@ -48,7 +49,7 @@ class Captive(models.Model):
     last_update = models.DateTimeField(default=timezone.now)
 
     def save(self, *args, **kwargs):
-        is_new = self.id is None
+        is_new = self.pk is None
         old_picture_name = None
 
         if not is_new and self.picture:
@@ -64,10 +65,10 @@ class Captive(models.Model):
 
         if self.picture:
             if is_new or (old_picture_name and old_picture_name != self.picture.name):
-                current_path = Path(default_storage.location) / self.picture.name
+                current_path = Path(settings.MEDIA_ROOT) / self.picture.name
 
-                new_relative_path = Path("captives") / str(self.id) / current_path.name
-                new_full_path = Path(default_storage.location) / new_relative_path
+                new_relative_path = Path("captives") / str(self.pk) / current_path.name
+                new_full_path = Path(settings.MEDIA_ROOT) / new_relative_path
 
                 new_full_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -76,14 +77,14 @@ class Captive(models.Model):
                     self.picture.name = str(new_relative_path)
                     super().save(update_fields=["picture"])
 
-                temp_dir = Path(default_storage.location) / "captives" / "temp"
+                temp_dir = Path(settings.MEDIA_ROOT) / "captives" / "temp"
                 if temp_dir.exists() and not any(temp_dir.iterdir()):
                     shutil.rmtree(temp_dir)
 
     def delete(self, *args, **kwargs):
         if self.picture:
             try:
-                picture_path = Path(default_storage.location) / self.picture.name
+                picture_path = Path(settings.MEDIA_ROOT) / self.picture.name
                 if picture_path.exists():
                     picture_path.unlink()
 
@@ -93,7 +94,10 @@ class Captive(models.Model):
             except Exception as e:
                 print(f"Error deleting file: {e}")
 
-        super().delete(*args, **kwargs)
+        return super().delete(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.name} ({self.get_person_type_display()})"
+        person_type_dict = dict(self.PERSON_TYPE_CHOICES)
+        return (
+            f"{self.name} ({person_type_dict.get(self.person_type, self.person_type)})"
+        )

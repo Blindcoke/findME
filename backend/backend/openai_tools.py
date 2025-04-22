@@ -1,9 +1,9 @@
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI  # type: ignore
 from django.conf import settings
 import numpy as np
 from .models import Captive
 from .serializers import CaptiveSerializer
-from asgiref.sync import sync_to_async
+from asgiref.sync import sync_to_async  # type: ignore
 
 openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 

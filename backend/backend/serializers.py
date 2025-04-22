@@ -1,8 +1,9 @@
 from django.contrib.auth.models import Group, User
-from rest_framework import serializers
+from rest_framework import serializers  # type: ignore
 from .models import Captive
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
+
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
@@ -20,7 +21,8 @@ class LoginSerializer(serializers.Serializer):
 
         data["user"] = user
         return data
-    
+
+
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     id = serializers.IntegerField(source="pk")
 
@@ -37,23 +39,24 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
             validated_data.pop("password")
         return super().update(instance, validated_data)
 
+
 class UserUpdateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
-    
+
     class Meta:
         model = User
-        fields = ('username', 'email', 'password')
-        
+        fields = ("username", "email", "password")
+
     def validate_password(self, value):
         if value:
             validate_password(value)
         return value
-        
+
     def update(self, instance, validated_data):
-        password = validated_data.pop('password', None)
+        password = validated_data.pop("password", None)
         if password:
             instance.set_password(password)
-        
+
         return super().update(instance, validated_data)
 
 
@@ -65,11 +68,11 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
 
 class CaptiveSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
-    
+
     class Meta:
         model = Captive
-        fields = '__all__'
+        fields = "__all__"
 
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
+        validated_data["user"] = self.context["request"].user
         return super().create(validated_data)
