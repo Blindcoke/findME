@@ -35,7 +35,7 @@ const SearchingPersons: React.FC<SearchingPersonsProps> = ({ isAuthenticated }) 
   const [filters, setFilters] = useState({
     personType: "",
     region: "",
-    status: "informed",
+    status: "searching",
     startDate: undefined as Date | undefined,
     endDate: undefined as Date | undefined,
     brigade: "",
