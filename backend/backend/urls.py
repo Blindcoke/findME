@@ -24,4 +24,9 @@ urlpatterns = [
         views.appearance_search,
         name="appearance_search",
     ),
+    path(
+        "photo_search/",
+        views.photo_search,
+        name="photo_search",
+    ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

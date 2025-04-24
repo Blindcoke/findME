@@ -11,3 +11,5 @@ openai
 python-dotenv
 uvicorn
 whitenoise
+deepface
+tf-keras

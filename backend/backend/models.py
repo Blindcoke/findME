@@ -46,6 +46,7 @@ class Captive(models.Model):
     circumstances = models.TextField(blank=True, null=True)
     appearance = models.TextField(blank=True, null=True)
     appearance_embedded = models.TextField(blank=True, null=True)
+    picture_embedded = models.TextField(blank=True, null=True)
     last_update = models.DateTimeField(default=timezone.now)
 
     def save(self, *args, **kwargs):

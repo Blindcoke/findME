@@ -1,4 +1,6 @@
 from django.contrib.auth.models import Group, User
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from rest_framework import permissions, viewsets, status
 from .models import Captive
 from .serializers import CaptiveSerializer, UserSerializer
@@ -11,9 +13,15 @@ from .serializers import LoginSerializer
 from django.http import JsonResponse
 import django_filters
 from django.db.models import Q
-from .openai_tools import search, create_embedding
+from .ai_tools import (
+    search_appearence,
+    search_photo,
+    create_embedding,
+    create_photo_embedding,
+)
 import json
 import asyncio
+from asgiref.sync import sync_to_async
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -59,6 +67,13 @@ class CaptiveViewSet(viewsets.ModelViewSet):
             embedding = asyncio.run(create_embedding(instance.appearance))
             instance.appearance_embedded = json.dumps(embedding)
             instance.save(update_fields=["appearance_embedded"])
+
+        if instance.picture:
+            image_bytes = instance.picture.read()
+            instance.picture.seek(0)
+            embedding = asyncio.run(create_photo_embedding(image_bytes))
+            instance.picture_embedded = json.dumps(embedding)
+            instance.save(update_fields=["picture_embedded"])
 
 
 class LoginView(APIView):
@@ -130,24 +145,51 @@ class MeView(APIView):
         )
 
 
+@login_required
+@require_POST
 async def appearance_search(request):
-    if request.method == "POST":
-        data = json.loads(request.body)
-        description = data.get("appearance", "").strip()
-        if not description:
-            return JsonResponse(
-                {"error": "Text is required"}, status=status.HTTP_400_BAD_REQUEST
-            )
+    data = json.loads(request.body)
+    description = data.get("appearance", "").strip()
+    status_filter = data.get("status", "")
+    if not description:
+        return JsonResponse(
+            {"error": "Text is required"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
-        try:
-            embedding = await create_embedding(description)
-            search_results = await search(embedding, request)
-            return JsonResponse(search_results, safe=False)
-        except Exception as e:
-            return JsonResponse(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+    try:
+        embedding = await create_embedding(description)
+        search_results = await search_appearence(embedding, request, status_filter)
+        return JsonResponse(search_results, safe=False)
+    except Exception as e:
+        return JsonResponse(
+            {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
-    return JsonResponse(
-        {"error": "Invalid request method"}, status=status.HTTP_405_METHOD_NOT_ALLOWED
-    )
+
+@login_required
+@require_POST
+async def photo_search(request):
+    photo_file = request.FILES.get("photo")
+    status_filter = request.POST.get("status", "")
+
+    if not photo_file:
+        return JsonResponse(
+            {"error": "Photo is required"}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        image_bytes = await sync_to_async(photo_file.read)()
+        embedding = await create_photo_embedding(image_bytes)
+        if embedding is None:
+            return JsonResponse(
+                {"error": "Failed to create embedding from the provided image"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        search_results = await search_photo(embedding, request, status_filter)
+        return JsonResponse(search_results, safe=False)
+
+    except Exception as e:
+        return JsonResponse(
+            {"error": f"Error processing image: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )

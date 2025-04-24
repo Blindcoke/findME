@@ -7,3 +7,5 @@ asyncio==3.4.3
 pytz==2024.1
 magentic
 pydantic
+deepface
+tf-keras

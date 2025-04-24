@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from ai.appearance import analyze_face
 from ai.extractor import extract_person_info
+from ai.face_embedder import get_face_embedding
 import json
 
 load_dotenv()
@@ -105,11 +106,17 @@ class TelegramScraper:
                     result = await analyze_face(photo_data, self.openai_client)
                     appearance = result.appearance
                     appearance_embedded = json.dumps(result.embedding)
+
+                    # Get face embedding using face_recognition
+                    picture_embedding = get_face_embedding(photo_data)
+                    picture_embedded = (
+                        json.dumps(picture_embedding) if picture_embedding else None
+                    )
                     self.cursor.execute(
                         """
                         INSERT INTO backend_captive 
-                        (name, person_type, brigade, settlement, status, circumstances, appearance, appearance_embedded, last_update, user_id)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+                        (name, person_type, brigade, settlement, status, circumstances, appearance, appearance_embedded, picture_embedded, last_update, user_id)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
                         """,
                         (
                             extracted_info.name,
@@ -120,6 +127,7 @@ class TelegramScraper:
                             extracted_info.circumstances,
                             appearance,
                             appearance_embedded,
+                            picture_embedded,
                             datetime.now(),
                             telegram_user_id,
                         ),
@@ -186,7 +194,7 @@ class TelegramScraper:
 
             async for message in self.client.iter_messages(
                 channel,
-                offset_date=datetime.now(tz=timezone.utc) - timedelta(hours=10),
+                offset_date=datetime.now(tz=timezone.utc) - timedelta(hours=15),
                 reverse=True,
                 limit=5,
             ):
