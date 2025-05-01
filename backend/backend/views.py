@@ -14,7 +14,7 @@ from django.http import JsonResponse
 import django_filters
 from django.db.models import Q
 from .ai_tools import (
-    search_appearence,
+    search_appearance,
     search_photo,
     create_embedding,
     create_photo_embedding,
@@ -60,20 +60,37 @@ class CaptiveViewSet(viewsets.ModelViewSet):
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filterset_class = CaptiveFilter
 
+    def get_queryset(self):
+        user_id = self.request.query_params.get("user_id")
+        if user_id:
+            return Captive.objects.filter(user_id=user_id)
+        return Captive.objects.all()
+
     def perform_create(self, serializer):
         instance = serializer.save(user=self.request.user)
+        self._create_embeddings(instance)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self._create_embeddings(instance)
+
+    def _create_embeddings(self, instance):
+        update_fields = []
 
         if instance.appearance:
             embedding = asyncio.run(create_embedding(instance.appearance))
             instance.appearance_embedded = json.dumps(embedding)
-            instance.save(update_fields=["appearance_embedded"])
+            update_fields.append("appearance_embedded")
 
         if instance.picture:
             image_bytes = instance.picture.read()
             instance.picture.seek(0)
             embedding = asyncio.run(create_photo_embedding(image_bytes))
             instance.picture_embedded = json.dumps(embedding)
-            instance.save(update_fields=["picture_embedded"])
+            update_fields.append("picture_embedded")
+
+        if update_fields:
+            instance.save(update_fields=update_fields)
 
 
 class LoginView(APIView):
@@ -158,7 +175,7 @@ async def appearance_search(request):
 
     try:
         embedding = await create_embedding(description)
-        search_results = await search_appearence(embedding, request, status_filter)
+        search_results = await search_appearance(embedding, request, status_filter)
         return JsonResponse(search_results, safe=False)
     except Exception as e:
         return JsonResponse(

@@ -1,117 +1,126 @@
-from openai import AsyncOpenAI  # type: ignore
+from openai import AsyncOpenAI
 from django.conf import settings
 import numpy as np
 from .models import Captive
 from .serializers import CaptiveSerializer
-from asgiref.sync import sync_to_async  # type: ignore
+from asgiref.sync import sync_to_async
 import io
 import tempfile
-from deepface import DeepFace  # type: ignore
+from deepface import DeepFace
 from PIL import Image
 from django.db.models import Q
 
-
 openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+BATCH_SIZE = 1000
+MODEL_DIMENSIONS = {
+    "picture_embedded": 128,
+    "appearance_embedded": 1536,
+}
 
 
 async def create_embedding(text: str) -> list:
-    embedding_response = await openai_client.embeddings.create(
+    response = await openai_client.embeddings.create(
         input=[text],
         model="text-embedding-3-small",
     )
-    return embedding_response.data[0].embedding
+    return response.data[0].embedding
 
 
-async def create_photo_embedding(image_bytes: bytes) -> list[float] | None:
-    try:
-        image = Image.open(io.BytesIO(image_bytes))
-        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=True) as temp_file:
-            image.save(temp_file.name)
-            embedding_obj = DeepFace.represent(
-                img_path=temp_file.name, model_name="SFace", enforce_detection=False
+async def create_photo_embedding(image_bytes: bytes) -> list[float]:
+    with Image.open(io.BytesIO(image_bytes)) as img:
+        with tempfile.NamedTemporaryFile(suffix=".jpg") as tmp:
+            img.save(tmp.name)
+            result = DeepFace.represent(
+                img_path=tmp.name,
+                model_name="SFace",
+                enforce_detection=False,
+                detector_backend="opencv",
             )
-        if embedding_obj:
-            return embedding_obj[0]["embedding"]
-        else:
-            return None
-    except Exception as e:
-        print("Error in create_photo_embedding:", e)
-        raise
+            return result[0]["embedding"] if result else []
+
+
+def apply_status_filter(qs, status: str):
+    if not status:
+        return qs
+
+    statuses = status.split("|") if "|" in status else [status]
+    return qs.filter(Q(status__in=statuses))
+
+
+async def async_batches(qs, batch_size: int):
+    total = await sync_to_async(qs.count)()
+    for offset in range(0, total, batch_size):
+        batch = await sync_to_async(list)(qs[offset : offset + batch_size])
+        yield batch
 
 
 async def search_by_embedding(
-    embedding: list, request, status: str, field_name: str
+    query_embedding: list[float], request, status: str, field_name: str
 ) -> list:
-    try:
-        query_embedding = np.array(embedding)
-        norm = np.linalg.norm(query_embedding)
-        query_embedding_normalized = (
-            query_embedding / norm
-            if np.any(query_embedding) and norm > 0
-            else query_embedding
+    expected_dim = MODEL_DIMENSIONS[field_name]
+    query_vec = np.asarray(query_embedding, dtype=np.float32)
+    if len(query_vec) != expected_dim:
+        raise ValueError(
+            f"Query embedding dimension mismatch for {field_name}. "
+            f"Expected {expected_dim}, got {len(query_vec)}"
         )
+    query_norm = np.linalg.norm(query_vec)
+    query_vec = query_vec / query_norm if query_norm > 0 else query_vec
+    qs = Captive.objects.exclude(**{f"{field_name}__isnull": True})
+    qs = apply_status_filter(qs, status)
+    top_matches = []
+    async for batch in async_batches(qs, BATCH_SIZE):
+        batch_matches = await process_batch(batch, field_name, query_vec, expected_dim)
+        top_matches.extend(batch_matches)
+        top_matches.sort(key=lambda x: x[0], reverse=True)
+        top_matches = top_matches[:5]
+    return await serialize_results([c for _, c in top_matches], request)
 
-        exclude_filter = {f"{field_name}__isnull": True}
-        captives_query = Captive.objects.exclude(**exclude_filter)
-        if status:
-            # Handle multiple statuses separated by |
-            if "|" in status:
-                statuses = status.split("|")
-                status_filter = Q(status=statuses[0])
-                for s in statuses[1:]:
-                    status_filter |= Q(status=s)
-                captives_query = captives_query.filter(status_filter)
-            else:
-                captives_query = captives_query.filter(status=status)
 
-        captives = await sync_to_async(lambda: list(captives_query))()
-        captive_data = await sync_to_async(
-            lambda: [(c, getattr(c, field_name)) for c in captives]
-        )()
+async def process_batch(
+    batch, field_name: str, query_vec: np.ndarray, expected_dim: int
+):
+    valid_embeddings = []
+    valid_captives = []
+    for captive in batch:
+        vec_str = getattr(captive, field_name)
+        vec = parse_embedding(vec_str, expected_dim)
 
-        results = []
-        for idx, (captive, vector_string) in enumerate(captive_data):
-            if not vector_string:
-                continue
-            try:
-                vector_string = vector_string.strip("[]")
-                if not vector_string or "," not in vector_string:
-                    continue
-
-                captive_embedding = np.fromstring(vector_string, sep=",")
-
-                if captive_embedding.size == 0:
-                    continue
-                norm_captive = np.linalg.norm(captive_embedding)
-                if norm_captive > 0:
-                    captive_embedding_normalized = captive_embedding / norm_captive
-                    similarity = np.dot(
-                        query_embedding_normalized, captive_embedding_normalized
-                    )
-                    results.append((similarity, captive))
-            except Exception as e:
-                print(
-                    f"Error processing captive {getattr(captive, 'id', 'unknown')}: {e}"
-                )
-                continue
-        top_matches = sorted(results, key=lambda x: x[0], reverse=True)[:5]
-
-        for sim, c in top_matches:
-            c._similarity = sim
-
-        serialized_data = await sync_to_async(
-            lambda: CaptiveSerializer(
-                [c for _, c in top_matches], many=True, context={"request": request}
-            ).data
-        )()
-        return serialized_data
-    except Exception as e:
+        if vec is not None:
+            valid_embeddings.append(vec)
+            valid_captives.append(captive)
+    if not valid_embeddings:
         return []
+
+    embeddings = np.array(valid_embeddings, dtype=np.float32)
+    norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0
+    embeddings_norm = embeddings / norms
+    similarities = embeddings_norm.dot(query_vec)
+    return list(zip(similarities.tolist(), valid_captives))
+
+
+def parse_embedding(vec_str: str, expected_dim: int) -> np.ndarray | None:
+    if not vec_str or vec_str.strip() == "[]":
+        return None
+
+    vec = np.fromstring(vec_str.strip("[]"), sep=",", dtype=np.float32)
+    if len(vec) != expected_dim:
+        return None
+    return vec if vec.size > 0 else None
+
+
+async def serialize_results(captives, request):
+    return await sync_to_async(
+        lambda: CaptiveSerializer(
+            captives, many=True, context={"request": request}
+        ).data
+    )()
 
 
 async def search_photo(embedding: list, request, status) -> list:
     return await search_by_embedding(embedding, request, status, "picture_embedded")
 
 
-async def search_appearence(embedding: list, request, status) -> list:
+async def search_appearance(embedding: list, request, status) -> list:
     return await search_by_embedding(embedding, request, status, "appearance_embedded")
