@@ -6,13 +6,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { User, LogOut, Archive, Settings, Menu, X } from 'lucide-react';
+import { User as UserIcon, LogOut, Archive, Settings, Menu, X } from 'lucide-react';
 import tridentUrl from '@/assets/trident.svg';
+import { User } from '../models/User';
 
-const Header: React.FC<{ isAuthenticated: boolean; onLogout: () => void }> = ({
-  isAuthenticated,
-  onLogout,
-}) => {
+interface HeaderProps {
+  user: User | null;
+  isAuthenticated: boolean;
+  onLogout: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ user, isAuthenticated, onLogout }) => {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -23,7 +27,6 @@ const Header: React.FC<{ isAuthenticated: boolean; onLogout: () => void }> = ({
       <div className="absolute top-4 right-4 md:top-6 md:right-10">
         {isAuthenticated ? (
           <>
-            {/* Desktop User Menu */}
             <div className="hidden md:block">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -32,7 +35,7 @@ const Header: React.FC<{ isAuthenticated: boolean; onLogout: () => void }> = ({
                    focus:outline-none focus:ring-0"
                     aria-label="User menu"
                     onMouseDown={(e) => e.currentTarget.blur()}>
-                    <User
+                    <UserIcon
                       size={32}
                       className="text-yellow-500 hover:scale-110 transition-transform"
                       strokeWidth={1.5}
@@ -52,6 +55,14 @@ const Header: React.FC<{ isAuthenticated: boolean; onLogout: () => void }> = ({
                   </DropdownMenuItem>
 
                   <DropdownMenuItem
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg transition-all hover:bg-emerald-700/50 cursor-pointer">
+                    <Link to={`/captives/user/${user?.id}`} className="flex items-center gap-2 text-white hover:text-yellow-400">
+                      <Archive size={16} className="text-yellow-500" />
+                      <span>Мої повідомлення</span>
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
                     className="flex items-center gap-3 px-4 py-3 rounded-lg transition-all hover:bg-emerald-700/50 cursor-pointer"
                     onClick={onLogout}>
                     <LogOut size={16} className="text-yellow-500" />
@@ -62,14 +73,11 @@ const Header: React.FC<{ isAuthenticated: boolean; onLogout: () => void }> = ({
               </DropdownMenu>
             </div>
 
-
-
-            {/* Mobile User Menu */}
             <div className="md:hidden">
               <button
                 onClick={() => setUserMenuOpen(true)}
                 className="bg-green-900 rounded-full p-1 hover:bg-emerald-700/30 transition-colors border-0">
-                <User
+                <UserIcon
                   size={32}
                   className="text-yellow-500 hover:scale-110 transition-transform"
                   strokeWidth={1.5}
@@ -95,6 +103,15 @@ const Header: React.FC<{ isAuthenticated: boolean; onLogout: () => void }> = ({
                       Налаштування
                     </Link>
 
+                    <Link
+                      to="/my-captives"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="px-8 py-4 text-2xl bg-emerald-800/50 hover:bg-emerald-700/50 hover:text-yellow-500 border-0 rounded-xl text-white w-64 text-center transition-all duration-300 backdrop-blur-sm shadow-lg flex items-center justify-center gap-1"
+                    >
+                      <Archive size={24} className="text-yellow-500" />
+                      Мої оголошення
+                    </Link>
+
                     <button
                       onClick={() => {
                         onLogout();
@@ -112,7 +129,6 @@ const Header: React.FC<{ isAuthenticated: boolean; onLogout: () => void }> = ({
           </>
         ) : (
           <div className="flex items-center gap-2">
-            {/* Desktop Buttons */}
             <div className="hidden md:flex gap-3">
               <Link
                 to="/login"
@@ -128,7 +144,6 @@ const Header: React.FC<{ isAuthenticated: boolean; onLogout: () => void }> = ({
               </Link>
             </div>
 
-            {/* Mobile Burger Menu */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 bg-emerald-800/50 hover:bg-emerald-700/50 rounded-xl backdrop-blur-sm transition-colors border-0"
@@ -136,7 +151,6 @@ const Header: React.FC<{ isAuthenticated: boolean; onLogout: () => void }> = ({
               <Menu className="h-6 w-6 text-white" />
             </button>
 
-            {/* Full-screen Mobile Menu Overlay */}
             {mobileMenuOpen && (
               <div className="fixed inset-0 z-50 bg-emerald-900/80 backdrop-blur-sm">
                 <div className="relative w-full h-full flex flex-col items-center justify-center gap-6">
@@ -169,7 +183,6 @@ const Header: React.FC<{ isAuthenticated: boolean; onLogout: () => void }> = ({
         )}
       </div>
 
-      {/* Logo and Archive Section */}
       <div className="flex flex-col items-center mb-12 pt-8">
         <Link to="/" className="block w-24 mb-8">
           <img

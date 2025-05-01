@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { User } from "../models/User";
 import { csrfToken, updateCsrfToken } from "../csrf";
-
-interface User {
-    id: number;
-    username: string;
-    email: string;
-}
+import { updateUserProfile, deleteUserAccount } from "../config/api";
 
 interface FormData {
     username: string;
@@ -56,62 +54,40 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, refreshUser }) => {
         setError(null);
         setSuccess(null);
 
-        try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/users/${user.id}/`, {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": csrfToken,
-                },
-                credentials: "include",
-                body: JSON.stringify({
-                    username: formData.username,
-                    email: formData.email,
-                    password: formData.password || undefined,
-                }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                setSuccess("Профіль успішно оновлено!");
-                setFormData(prev => ({ ...prev, password: "" }));
-                updateCsrfToken();
-                await refreshUser();
-            } else {
-                setError(data.error || "Не вдалося оновити профіль.");
-            }
+    try {
+        const result = await updateUserProfile(Number(user.id), formData, csrfToken);
+        if (result.success) {
+            setSuccess("Профіль успішно оновлено!");
+            setFormData(prev => ({ ...prev, password: "" }));
+            updateCsrfToken();
+            await refreshUser();
+        } else {
+            setError(result.error || null);
+        }
         } catch (err) {
-            setError("Щось пішло не так. Спробуйте ще раз.");
-            console.error(err);
+        console.error(err);
+        setError("Щось пішло не так. Спробуйте ще раз.");
         } finally {
-            setIsLoading(false);
+        setIsLoading(false);
         }
     };
 
     const handleDeleteAccount = async () => {
         if (!user) return;
         if (!window.confirm("Ви впевнені, що хочете видалити свій акаунт?")) return;
-
+        
         setIsLoading(true);
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/users/${user.id}/`, {
-                method: "DELETE",
-                headers: {
-                    "X-CSRFToken": csrfToken,
-                },
-                credentials: "include",
-            });
-
-            if (response.ok) {
-                alert("Ваш акаунт успішно видалено.");
-                navigate("/register");
+            const result = await deleteUserAccount(Number(user.id), csrfToken);
+            if (result.success) {
+            alert("Ваш акаунт успішно видалено.");
+            navigate("/register");
             } else {
-                setError("Не вдалося видалити акаунт.");
+            setError(result.error || null);
             }
         } catch (err) {
-            setError("Щось пішло не так. Спробуйте ще раз.");
             console.error(err);
+            setError("Щось пішло не так. Спробуйте ще раз.");
         } finally {
             setIsLoading(false);
         }
@@ -129,85 +105,94 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, refreshUser }) => {
 
     return (
         <div className="flex items-center justify-center">
-            <form
-                onSubmit={handleUpdate}
-                className="bg-emerald-700/50 backdrop-blur-sm p-8 rounded-xl shadow-lg max-w-md w-full"
-            >
-                <h2 className="text-white text-3xl font-semibold mb-6 text-center">
-                    Налаштування
-                </h2>
+          <form
+            onSubmit={handleUpdate}
+            className="bg-emerald-700/50 backdrop-blur-sm p-8 rounded-xl shadow-lg max-w-md w-full"
+          >
+            <h2 className="text-white text-3xl font-semibold mb-6 text-center">
+              Налаштування
+            </h2>
+      
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+            {success && <p className="text-green-500 text-sm mb-4">{success}</p>}
+      
+            <div className="mb-4">
+              <label htmlFor="username" className="block text-white mb-2">
+                Ім'я користувача
+              </label>
+              <Input
+                type="text"
+                id="username"
+                name="username"
+                value={formData.username}
+                onChange={handleInputChange}
+                required
+                disabled={isLoading}
+                className="mb-4"
+              />
+            </div>
+      
+            <div className="mb-4">
+              <label htmlFor="email" className="block text-white mb-2">
+                Електронна пошта
+              </label>
+              <Input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                required
+                disabled={isLoading}
+                className="mb-4"
+              />
+            </div>
+      
+            <div className="mb-6">
+              <label htmlFor="password" className="block text-white mb-2">
+                Новий пароль (необов'язково)
+              </label>
+              <Input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                disabled={isLoading}
+                className="mb-4"
+              />
+            </div>
+      
+            <div className="space-y-4">
+            <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full text-white font-medium border-0 rounded-xl py-2 
+                          bg-gradient-to-r from-orange-400 to-yellow-500 
+                          hover:from-orange-500 hover:to-yellow-600 
+                          transition-all duration-200 shadow-md 
+                          disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? "Збереження..." : "Зберегти"}
+              </Button>
 
-                {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-                {success && <p className="text-green-500 text-sm mb-4">{success}</p>}
+              <Button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={isLoading}
+                className="w-full text-white font-medium border-0 rounded-xl py-2 
+                          bg-gradient-to-r from-red-500 to-pink-600 
+                          hover:from-red-600 hover:to-pink-500 
+                          transition-all duration-200 shadow-md 
+                          disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? "Видалення..." : "Видалити акаунт"}
+              </Button>
 
-                <div className="mb-4">
-                    <label htmlFor="username" className="block text-white mb-2">
-                        Ім'я користувача
-                    </label>
-                    <input
-                        type="text"
-                        id="username"
-                        name="username"
-                        value={formData.username}
-                        onChange={handleInputChange}
-                        className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
-                        required
-                        disabled={isLoading}
-                    />
-                </div>
-
-                <div className="mb-4">
-                    <label htmlFor="email" className="block text-white mb-2">
-                        Електронна пошта
-                    </label>
-                    <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
-                        required
-                        disabled={isLoading}
-                    />
-                </div>
-
-                <div className="mb-6">
-                    <label htmlFor="password" className="block text-white mb-2">
-                        Новий пароль (необов'язково)
-                    </label>
-                    <input
-                        type="password"
-                        id="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
-                        disabled={isLoading}
-                    />
-                </div>
-
-                <div className="space-y-4">
-                    <button
-                        type="submit"
-                        disabled={isLoading}
-                        className="w-full bg-yellow-500 text-black font-medium px-4 py-2 rounded-lg hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isLoading ? "Збереження..." : "Зберегти"}
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={handleDeleteAccount}
-                        disabled={isLoading}
-                        className="w-full bg-red-500 text-white font-medium px-4 py-2 rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isLoading ? "Видалення..." : "Видалити акаунт"}
-                    </button>
-                </div>
-            </form>
+            </div>
+          </form>
         </div>
-    );
+      );
 };
 
 export default UserSettings;

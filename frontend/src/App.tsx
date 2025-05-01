@@ -10,14 +10,11 @@ import UserSettings from "./components/UserSettings";
 import CaptiveDetails from "./components/CaptiveDetails";
 import AddCaptiveForm from "./components/AddCaptiveForm";
 import Archive from "./components/Archive";
+import UserCaptives from "./components/UserCaptives";
+import { User } from "./models/User";
 import { csrfToken } from "./csrf";
-
-interface User {
-  id: number;
-  username: string;
-  email: string;
-}
-
+import CaptiveEdit from "./components/CaptiveEdit";
+import { fetchUserData, logoutUser } from "./config/api";
 
 
 const App: React.FC = () => {
@@ -25,64 +22,44 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
 
 
-  const fetchUserData = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/me/`, {
-        credentials: "include",
-      });
-      if (response.ok) {
-        const userData = await response.json();
-        setIsAuthenticated(true);
-        setUser(userData);
-      } else {
-        setIsAuthenticated(false);
-        setUser(null);
-      }
-    } catch (error) {
-      console.error("Failed to fetch user data:", error);
+  useEffect(() => {
+    fetchUser();
+  }, []);
+  
+  const fetchUser = async () => {
+    const result = await fetchUserData();
+    if (result.success) {
+      setIsAuthenticated(true);
+      setUser(result.data);
+    } else {
       setIsAuthenticated(false);
       setUser(null);
     }
   };
-
-  const onLogout = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/logout/`, {
-        method: "POST",
-        headers: {
-          "X-CSRFToken": csrfToken,
-        },
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        setIsAuthenticated(false);
-        setUser(null);
-      } else {
-        console.error("Failed to logout");
-      }
-    } catch (error) {
-      console.error("Failed to logout:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchUserData();
-  }, []);
-
+  
   const handleLoginSuccess = async () => {
-    await fetchUserData();
+    await fetchUser();
   };
-
+  
   const refreshUser = async () => {
-    await fetchUserData();
+    await fetchUser();
+  };
+  
+  const onLogout = async () => {
+    const success = await logoutUser(csrfToken);
+    if (success) {
+      setIsAuthenticated(false);
+      setUser(null);
+    } else {
+      console.error("Failed to logout");
+    }
   };
 
   return (
     <Router>
       <div className="min-h-screen bg-gradient-to-b from-emerald-950 to-emerald-800">
         <div className="container mx-auto p-4">
-          <Header isAuthenticated={isAuthenticated} onLogout={onLogout} />
+          <Header isAuthenticated={isAuthenticated} onLogout={onLogout} user={user} />
 
           <Routes>
             <Route
@@ -96,10 +73,10 @@ const App: React.FC = () => {
                     <Card className="h-full bg-emerald-800/50 hover:bg-emerald-700/50 text-white shadow-lg transition-all duration-300 border-0 backdrop-blur-sm">
                       <CardContent className="flex flex-col justify-center items-center h-full text-center p-8">
                         <h2 className="text-3xl font-semibold mb-4">
-                          Розшукові оголошення
+                          Розшукувані особи
                         </h2>
                         <p className="text-lg">
-                          Переглянути оголошення або додати розшукувану особу
+                          Переглянути список розшукуваних або додати особу
                         </p>
                       </CardContent>
                     </Card>
@@ -114,7 +91,7 @@ const App: React.FC = () => {
                           Є інформація
                         </h2>
                         <p className="text-lg">
-                          Переглянути осіб, про яких маються дані, або додати інформацію
+                          Переглянути список осіб, про яких маються дані, або додати особу
                         </p>
                       </CardContent>
                     </Card>
@@ -131,9 +108,13 @@ const App: React.FC = () => {
             />
             <Route path="/register" element={<Register />} />
             <Route path="/settings" element={<UserSettings user={user} refreshUser={refreshUser} />} />
-            <Route path="/searching/:id" element={<CaptiveDetails />} />
-            <Route path="/archive/:id" element={<CaptiveDetails />} />
-            <Route path="/informated/:id" element={<CaptiveDetails />} />
+            <Route path="/searching/:id" element={<CaptiveDetails user={user} />} />
+            <Route path="/informated/:id" element={<CaptiveDetails user={user} />} />
+            <Route path="/archive/:id" element={<CaptiveDetails user={user} />} />
+            <Route path="/captives/:id" element={<CaptiveDetails user={user} />} />
+            <Route path="/captives/user/:id" element={<UserCaptives user={user} />} />
+            <Route path="/captives/:id/edit" element={<CaptiveEdit user={user} />} />
+            <Route path="my-captives" element={<UserCaptives user={user} />} />
             <Route
               path="/informated/add"
               element={<AddCaptiveForm formType="informed" />}

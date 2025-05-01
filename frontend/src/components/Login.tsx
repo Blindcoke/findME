@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
 import { csrfToken, updateCsrfToken } from "../csrf";
+import { loginUser } from "../config/api";
 
 interface User {
   id: number;
@@ -19,56 +22,21 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const getCsrfFromCookie = (): string | null => {
-    const name = "csrftoken=";
-    const decodedCookie = decodeURIComponent(document.cookie);
-    const cookieArray = decodedCookie.split(";");
-
-    for (let cookie of cookieArray) {
-      cookie = cookie.trim();
-      if (cookie.indexOf(name) === 0) {
-        return cookie.substring(name.length);
-      }
-    }
-    return null;
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true); 
-    try {
-      const response = await fetch("http://localhost:8000/login/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": csrfToken,
-        },
-        body: JSON.stringify({ username, password }),
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        const newCsrfToken = getCsrfFromCookie();
-
-        if (newCsrfToken) {
-          updateCsrfToken();
-        } else {
-          console.warn("No CSRF token found in cookies after login");
-        }
-
-        const userData = await response.json(); // Get user data from the response
-        onLoginSuccess(userData); // Pass the user data to the parent
-        navigate("/");
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Invalid credentials");
-      }
-    } catch (err) {
-      setError("Something went wrong. Please try again.");
-      console.error("Login error:", err);
-    } finally {
-      setLoading(false); // Stop loading spinner
+    setLoading(true);
+  
+    const result = await loginUser(username, password, csrfToken);
+  
+    if (result.success) {
+      updateCsrfToken();
+      onLoginSuccess(result.data);
+      navigate("/");
+    } else {
+      setError(result.error || "Login failed");
     }
+  
+    setLoading(false);
   };
 
   return (
@@ -85,35 +53,33 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <label htmlFor="username" className="block text-white mb-2">
             Логін
           </label>
-          <input
+          <Input
             type="text"
             id="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
             required
             disabled={loading}
+            className="mb-4"
           />
         </div>
         <div className="mb-6">
           <label htmlFor="password" className="block text-white mb-2">
             Пароль
           </label>
-          <input
+          <Input
             type="password"
             id="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full mb-4 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-black dark:text-white rounded"
             required
             disabled={loading}
+            className="mb-4"
           />
         </div>
-        <button
+        <Button
           type="submit"
-          className={`w-full border-0 ${
-            loading ? "bg-yellow-600" : "bg-yellow-500 hover:bg-yellow-600"
-          } text-black font-medium px-4 py-2 rounded-lg`}
+          className={`w-full ${loading ? "bg-yellow-600" : "bg-yellow-500 hover:bg-yellow-600"} text-black font-medium border-0`}
           disabled={loading}
         >
           {loading ? (
@@ -143,7 +109,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           ) : (
             "Увійти"
           )}
-        </button>
+        </Button>
       </form>
     </div>
   );

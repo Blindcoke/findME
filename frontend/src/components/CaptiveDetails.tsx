@@ -1,7 +1,16 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
+import { Pencil, Trash2 } from "lucide-react";
+import { fetchCaptiveById, deleteCaptiveById } from "../config/api";
+import { csrfToken } from "../csrf";
+
+interface User {
+    id: string;
+    username: string;
+    email: string;
+}
 
 interface Captive {
     id: string;
@@ -17,41 +26,101 @@ interface Captive {
     appearance?: string;
     last_update?: string;
     user: {
+        id: string;
         username: string;
         email: string;
     };
 }
 
-function CaptiveDetails() {
+interface CaptiveDetailsProps {
+    user: User | null;
+}
+
+const CaptiveDetails: React.FC<CaptiveDetailsProps> = ({ user: currentUser }) => {
     const [showContact, setShowContact] = useState(false);
     const [captive, setCaptive] = useState<Captive | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
-    const { id } = useParams();
+    const [isDeleting, setIsDeleting] = useState(false);
+    const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const getCurrentSection = () => {
+        const path = location.pathname;
+        if (path.includes("/searching/")) return "searching";
+        if (path.includes("/informated/")) return "informed";
+        if (path.includes("/archive/")) return "archive";
+        if (path.includes("/captives/")) return "captives";
+    };
+
+    const section = getCurrentSection();
+    const isOwner = currentUser?.id === captive?.user?.id;
+
 
     useEffect(() => {
-        const fetchCaptive = async () => {
-            try {
-                const response = await fetch(
-                    `${import.meta.env.VITE_API_URL}/captives/${id}/`,
-                    { credentials: "include" }
-                );
-
-                if (!response.ok) throw new Error('Не вдалося завантажити дані');
-
-                const data = await response.json();
-                setCaptive(data);
-                setIsLoading(false);
-            } catch (error) {
-                console.error("Fetch error:", error);
-                setError("Помилка завантаження даних");
-                setIsLoading(false);
+        const fetchData = async () => {
+          setIsLoading(true);
+          if (id) {
+            const result = await fetchCaptiveById(id);
+            if (result.success) {
+              setCaptive(result.data);
+            } else {
+              setError(result.error || "Unknown error");
             }
+          } else {
+            setError("No ID provided");
+          }
+          setIsLoading(false);
         };
+      
+        fetchData();
+      }, [id]);
+      
+    const handleEdit = () => {
+    navigate(`/captives/${captive?.id}/edit/`);
+    };
+    
+    const handleDelete = async () => {
+        if (!captive || !captive.id) {
+            setError("Особу для видалення не знайдено");
+            return;
+        }
+        
+        if (!window.confirm("Ви впевнені, що хочете видалити цю особу? Ця дія незворотна.")) return;
 
-        fetchCaptive();
-    }, [id]);
+        setIsDeleting(true);
+        const result = await deleteCaptiveById(captive.id, csrfToken);
+
+        if (result.success) {
+            if (currentUser) {
+            navigate(`/captives/user/${currentUser.id}`);
+            } else {
+            navigate(section ? {
+                informed: "/informated",
+                searching: "/searching",
+                archive: "/archive",
+                captives: "/captives"
+            }[section] : "/captives");
+            }
+        } else {
+            setError(result.error || "Помилка при видаленні");
+            setIsDeleting(false);
+        }
+    };
+
+    const getBackUrl = () => {
+        switch (section) {
+            case "informed":
+                return "/informated";
+            case "searching":
+                return "/searching";
+            case "archive":
+                return "/archive";
+            default:
+                return -1;
+        }
+    };
 
     if (isLoading) return <div className="text-center text-white text-xl py-8">Завантаження...</div>;
     if (error) return <div className="text-center text-red-300 text-xl py-8">{error}</div>;
@@ -59,12 +128,46 @@ function CaptiveDetails() {
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-8">
-            <Button
-                onClick={() => navigate(-1)}
-                className="mb-6 bg-emerald-700 hover:bg-emerald-600 text-white border-0"
-            >
-                Назад
-            </Button>
+            <div className="flex justify-between items-center mb-6">
+                <Button
+                    onClick={() => {
+                        const backUrl = getBackUrl();
+                        if (backUrl === -1) {
+                            navigate(-1);
+                        } else {
+                            navigate(backUrl);
+                        }
+                    }}
+                    className="bg-emerald-700 hover:bg-emerald-600 text-white"
+                >
+                    Назад
+                </Button>
+
+                {isOwner && (
+                    <div className="flex gap-2">
+                        <Button
+                            onClick={handleEdit}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-2"
+                            disabled={isDeleting}
+                        >
+                            <Pencil className="h-4 w-4" />
+                            Редагувати
+                        </Button>
+                        <Button
+                            onClick={handleDelete}
+                            className="bg-red-600 hover:bg-red-500 text-white flex items-center gap-2"
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? "Видалення..." : (
+                                <>
+                                    <Trash2 className="h-4 w-4" />
+                                    Видалити
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                )}
+            </div>
 
             <Card className="bg-emerald-900/50 backdrop-blur-lg border-2 border-emerald-700 rounded-2xl">
                 <CardContent className="p-8 space-y-6">
@@ -97,7 +200,7 @@ function CaptiveDetails() {
                                     </span>
                                 ) : captive.status === 'reunited' ? (
                                     <span className="px-3 py-1 bg-gradient-to-r from-blue-500/80 to-cyan-600/80 rounded-full text-sm font-medium text-white shadow-md truncate">
-                                        Возз’єднано
+                                        Возз'єднано
                                     </span>
                                 ) : null}
                                 <span className="px-3 py-1 bg-emerald-700/50 rounded-full text-sm text-emerald-100 truncate">
@@ -159,14 +262,25 @@ function CaptiveDetails() {
                             </Button>
 
                             {showContact && (
-                                <div className="space-y-2 text-emerald-100">
-                                    <div className="flex min-w-0">
+                                <div className="space-y-2 text-emerald-100 mt-2">
+                                    <div className="flex min-w-0 items-center">
                                         <strong className="flex-shrink-0">Інформатор:</strong>
-                                        <span className="ml-2 truncate min-w-0 flex-1">{captive.user.username}</span>
+                                        <a
+                                            href={`/captives/user/${captive.user.id}`}
+                                            className="ml-2 truncate min-w-0 flex-1 text-emerald-300 hover:underline"
+                                        >
+                                            {captive.user.username}
+                                        </a>
                                     </div>
-                                    <div className="flex min-w-0">
+
+                                    <div className="flex min-w-0 items-center">
                                         <strong className="flex-shrink-0">Email:</strong>
-                                        <span className="ml-2 truncate min-w-0 flex-1">{captive.user.email}</span>
+                                        <a
+                                            href={`mailto:${captive.user.email}`}
+                                            className="ml-2 truncate min-w-0 flex-1 text-emerald-300 hover:underline"
+                                        >
+                                            {captive.user.email}
+                                        </a>
                                     </div>
                                 </div>
                             )}

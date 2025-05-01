@@ -4,6 +4,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import Search from "./Search";
 import CaptiveCard from './CaptiveCard';
+import { fetchCaptivesByStatus } from "../config/api";
 
 interface Captive {
   id: number;
@@ -67,27 +68,19 @@ const SearchingPersons: React.FC<SearchingPersonsProps> = ({ isAuthenticated }) 
   };
 
   useEffect(() => {
-    const fetchCaptives = async () => {
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/captives/?status=searching`,
-          { credentials: "include" }
-        );
-
-        if (!response.ok) throw new Error('Failed to fetch');
-
-        const data = await response.json();
-        setCaptives(data);
-        setOriginalCaptives(data);
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Fetch error:", error);
-        setError("Failed to load data");
-        setIsLoading(false);
+    const fetchData = async () => {
+      setIsLoading(true);
+      const result = await fetchCaptivesByStatus("searching");
+      if (result.success) {
+        setCaptives(result.data);
+        setOriginalCaptives(result.data);
+      } else {
+        setError(result.error || "Unknown error");
       }
+      setIsLoading(false);
     };
-
-    fetchCaptives();
+  
+    fetchData();
   }, []);
   
 

@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { Disclosure } from "@headlessui/react";
 import { csrfToken } from "../csrf";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-
+import { searchByAppearance, searchByPhoto } from "../config/api";
 interface Filters {
     personType: string;
     region: string;
@@ -40,32 +40,29 @@ const Search = ({ filters, setFilters, setCaptives, resetCaptives }: SearchProps
     const handleAppearanceSearch = async () => {
         if (!appearanceInput) return;
       
-        try {
-          const response = await fetch(`${import.meta.env.VITE_API_URL}/appearance_search/`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Accept": "application/json",
-              "X-CSRFToken": csrfToken || '',
-            },
-            credentials: "include",
-            body: JSON.stringify({
-              appearance: appearanceInput,
-              status: filters.status,
-            }),
-          });
+        const result = await searchByAppearance(csrfToken || '', appearanceInput, filters.status);
       
-          if (!response.ok) {
-            throw new Error("Failed to search by appearance");
-          }
-      
-          const data = await response.json();
-          setCaptives(data);
+        if (result.success && result.data) {
+          setCaptives(result.data);
           setFilters({ ...filters, appearance: appearanceInput });
-      
-        } catch (error) {
-          console.error("Error during appearance search:", error);
+        } else {
+          console.error(result.error);
         }
+    };
+      
+    const handlePhotoSearch = async () => {
+        if (!photoFile) return;
+        
+        setIsUploading(true);
+        const result = await searchByPhoto(csrfToken || '', photoFile, filters.status);
+        
+        if (result.success && result.data) {
+            setCaptives(result.data);
+        } else {
+            console.error(result.error);
+        }
+        
+        setIsUploading(false);
     };
 
     const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,38 +79,7 @@ const Search = ({ filters, setFilters, setCaptives, resetCaptives }: SearchProps
         }
     };
 
-    const handlePhotoSearch = async () => {
-        if (!photoFile) return;
-        
-        setIsUploading(true);
-        
-        try {
-            const formData = new FormData();
-            formData.append('photo', photoFile);
-            formData.append('status', filters.status);
-            
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/photo_search/`, {
-                method: "POST",
-                headers: {
-                    "X-CSRFToken": csrfToken || '',
-                },
-                credentials: "include",
-                body: formData,
-            });
-            
-            if (!response.ok) {
-                throw new Error("Failed to search by photo");
-            }
-            
-            const data = await response.json();
-            setCaptives(data);
-            
-        } catch (error) {
-            console.error("Error during photo search:", error);
-        } finally {
-            setIsUploading(false);
-        }
-    };
+
 
     const clearPhotoUpload = () => {
         setPhotoFile(null);
@@ -129,8 +95,8 @@ const Search = ({ filters, setFilters, setCaptives, resetCaptives }: SearchProps
         setFilters({ ...filters, appearance: "" });
         resetCaptives();
         setShowAlternativeSearch(false);
+        
     };
-
     return (
         <div className="space-y-6">
             <Disclosure>
@@ -194,7 +160,13 @@ const Search = ({ filters, setFilters, setCaptives, resetCaptives }: SearchProps
                                                     {filters.startDate ? format(filters.startDate, "dd.MM.y") : "Від"}
                                                 </Button>
                                             </PopoverTrigger>
-                                            <PopoverContent className="bg-emerald-800/80 backdrop-blur-lg border-2 border-emerald-600 text-emerald-100">
+                                            <PopoverContent
+                                                align="center"
+                                                side="bottom"
+                                                avoidCollisions={true}
+                                                sideOffset={8}
+                                                className="bg-emerald-800/80 backdrop-blur-lg border-2 border-emerald-600 p-0 w-auto max-h-[80vh] overflow-auto rounded-xl z-50"
+                                            >
                                                 <Calendar
                                                     mode="single"
                                                     selected={filters.startDate}
@@ -207,19 +179,25 @@ const Search = ({ filters, setFilters, setCaptives, resetCaptives }: SearchProps
                                         <Popover>
                                             <PopoverTrigger asChild>
                                                 <Button
-                                                    variant="outline"
-                                                    className="bg-emerald-800/20 hover:bg-emerald-700/30 border-2 border-emerald-600 text-emerald-100 w-full justify-start rounded-xl hover:border-emerald-500"
+                                                variant="outline"
+                                                className="bg-emerald-800/20 border-2 border-emerald-600 text-emerald-100 hover:bg-emerald-700/30 hover:border-emerald-500 w-full justify-start rounded-xl"
                                                 >
-                                                    <CalendarIcon className="mr-2 h-4 w-4 text-emerald-300" />
-                                                    {filters.endDate ? format(filters.endDate, "dd.MM.y") : "До"}
+                                                <CalendarIcon className="mr-2 h-4 w-4 text-emerald-300" />
+                                                {filters.endDate ? format(filters.endDate, "dd.MM.y") : "До"}
                                                 </Button>
                                             </PopoverTrigger>
-                                            <PopoverContent className="bg-emerald-800/80 backdrop-blur-lg border-2 border-emerald-600 text-emerald-100">
+                                            <PopoverContent
+                                                align="center"
+                                                side="bottom"
+                                                avoidCollisions={true}
+                                                sideOffset={8}
+                                                className="bg-emerald-800/80 backdrop-blur-lg border-2 border-emerald-600 p-0 w-auto max-h-[80vh] overflow-auto rounded-xl z-50"
+                                            >
                                                 <Calendar
-                                                    mode="single"
-                                                    selected={filters.endDate}
-                                                    onSelect={(date) => setFilters({ ...filters, endDate: date })}
-                                                    className="rounded-xl"
+                                                mode="single"
+                                                selected={filters.endDate}
+                                                onSelect={(date) => setFilters({ ...filters, endDate: date })}
+                                                className="rounded-xl"
                                                 />
                                             </PopoverContent>
                                         </Popover>
