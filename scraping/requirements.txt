@@ -1,0 +1,11 @@
+telethon==1.34.0
+python-dotenv==1.0.0
+psycopg2-binary==2.9.9
+openai
+aiohttp==3.9.3
+asyncio==3.4.3
+pytz==2024.1
+magentic
+pydantic
+deepface
+tf-keras

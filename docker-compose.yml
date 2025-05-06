@@ -15,14 +15,14 @@ services:
       timeout: 2s
       retries: 20
     ports:
-      - "5432:5432"
+      - "5433:5432"
     entrypoint: |
       sh -c '
       mkdir -p /var/lib/postgresql/data
       chown -R postgres:postgres /var/lib/postgresql/data
       exec docker-entrypoint.sh postgres
       '
-    restart: always
+    restart: no
 
   findme-backend:
     build:
@@ -30,6 +30,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./backend:/app
+      - ./data/media:/data/media
     env_file:
       - .env
     ports:
@@ -38,8 +39,8 @@ services:
       findme-db:
         condition: service_healthy
     command: >
-      bash -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
-    restart: always
+      bash -c "python manage.py migrate && uvicorn backend.asgi:application --host 0.0.0.0 --port 8000 --reload"
+    restart: no
 
   findme-frontend:
     build:
@@ -49,4 +50,19 @@ services:
       - '5173:5173'
     volumes:
       - ./frontend:/usr/src/app
-    restart: always
+    restart: no
+
+  findme-scraper:
+    build:
+      context: ./scraping
+      dockerfile: Dockerfile
+    volumes:
+      - ./scraping:/app
+      - ./data/media:/data/media
+      - ./scraping/sessions:/app/sessions
+    env_file:
+      - .env
+    depends_on:
+      findme-db:
+        condition: service_healthy
+    restart: no 

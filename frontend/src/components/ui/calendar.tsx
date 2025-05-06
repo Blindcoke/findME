@@ -16,49 +16,70 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      captionLayout="dropdown"
+      fromYear={1900}
+      toYear={new Date().getFullYear()}
+      className={cn(
+        "p-6 rounded-xl shadow-2xl bg-emarald-900/60 backdrop-blur-lg mx-auto w-fit",
+        className
+      )}
       classNames={{
-        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-6 sm:space-y-0 justify-center",
         month: "space-y-4",
-        caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-lg font-medium text-emerald-300",
-        nav: "space-x-1 flex items-center",
-        nav_button: cn(
-          buttonVariants({ variant: "outline" }),
-          "h-8 w-8 bg-emerald-800/50 border-2 border-emerald-600 hover:bg-emerald-700/50 text-emerald-300 rounded-xl"
-        ),
-        nav_button_previous: "absolute left-4",
-        nav_button_next: "absolute right-4",
+        caption: "flex justify-center items-center space-x-4",
+        caption_label: "hidden",
+        caption_dropdowns: "flex space-x-3",
+        dropdown:
+          "bg-emerald-900 text-lime-100 text-sm font-medium rounded-xl px-4 py-2 border border-green-600 hover:border-green-400 transition duration-200 shadow-md",
+        nav: "hidden",
         table: "w-full border-collapse space-y-1",
-        head_row: "flex",
-        head_cell: "text-emerald-400 rounded-md w-8 font-normal text-[0.8rem]",
-        row: "flex w-full mt-2",
+        head_row: "flex justify-center",
+        head_cell:
+          "text-lime-400 font-semibold text-[0.8rem] w-10 text-center",
+        row: "flex w-full justify-center mt-2",
         cell: cn(
-          "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
+          "relative p-0 text-center text-sm",
           props.mode === "range"
-            ? "[&:has(>.day-range-end)]:rounded-r-md [&:has(>.day-range-start)]:rounded-l-md first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
-            : "[&:has([aria-selected])]:rounded-md"
+            ? "[&:has(>.day-range-end)]:rounded-full [&:has(>.day-range-start)]:rounded-full first:[&:has([aria-selected])]:rounded-full last:[&:has([aria-selected])]:rounded-full"
+            : "[&:has([aria-selected])]:rounded-full"
         ),
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal bg-emerald-800/50 text-emerald-200 hover:bg-emerald-700/50"
+          "h-10 w-10 p-0 font-medium text-emerald-200 bg-emerald-900/40 hover:bg-emerald-700/60 hover:text-lime-200 transition rounded-full"
         ),
-        day_range_start: "day-range-start bg-emerald-600 text-white",
-        day_range_end: "day-range-end bg-emerald-600 text-white",
-        day_selected: "bg-emerald-600 text-white hover:bg-emerald-600",
-        day_today: "bg-emerald-700 text-white ring-2 ring-emerald-400",
-        day_outside: "text-emerald-400/50 aria-selected:bg-emerald-600/50",
-        day_disabled: "text-emerald-400 opacity-50",
-        day_range_middle: "aria-selected:bg-emerald-700/50 aria-selected:text-emerald-200",
+        day_range_start:
+          "day-range-start bg-emerald-500 text-white font-bold ring-2 ring-lime-400 shadow-md",
+        day_range_end:
+          "day-range-end bg-emerald-500 text-white font-bold ring-2 ring-lime-400 shadow-md",
+        day_selected:
+          "bg-lime-500 text-black font-semibold hover:bg-lime-400 ring-2 ring-lime-600 shadow-lg",
+        day_today:
+          "bg-cyan-700 text-white font-bold ring-2 ring-cyan-400 ring-offset-2 ring-offset-zinc-800",
+        day_outside: "text-zinc-500/50",
+        day_disabled: "text-zinc-500 opacity-50",
+        day_range_middle:
+          "aria-selected:bg-emerald-700/40 aria-selected:text-lime-100",
         day_hidden: "invisible",
         ...classNames,
       }}
       components={{
         IconLeft: ({ className, ...props }) => (
-          <ChevronLeft className={cn("h-4 w-4 text-emerald-300", className)} {...props} />
+          <ChevronLeft
+            className={cn(
+              "h-5 w-5 text-emerald-300 hover:text-lime-200 transition-colors",
+              className
+            )}
+            {...props}
+          />
         ),
         IconRight: ({ className, ...props }) => (
-          <ChevronRight className={cn("h-4 w-4 text-emerald-300", className)} {...props} />
+          <ChevronRight
+            className={cn(
+              "h-5 w-5 text-emerald-300 hover:text-lime-200 transition-colors",
+              className
+            )}
+            {...props}
+          />
         ),
       }}
       {...props}

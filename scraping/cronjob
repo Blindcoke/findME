@@ -1,0 +1,1 @@
+0 0 * * * python /app/telegram_scraper.py >> /var/log/scraper.log 2>&1
