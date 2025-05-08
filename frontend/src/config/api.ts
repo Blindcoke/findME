@@ -49,41 +49,82 @@ export const logoutUser = async (csrfToken: string) => {
 
   
 export const loginUser = async (
-    username: string,
-    password: string,
-    csrfToken: string
-  ): Promise<{ success: boolean; data?: any; error?: string }> => {
-    try {
-      const response = await fetch(`${API_URL}/login/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": csrfToken,
-        },
-        body: JSON.stringify({ username, password }),
-        credentials: "include",
-      });
-  
-      if (response.ok) {
-        getCsrfFromCookie();
-        return {
-          success: true,
-          data: await response.json(),
-        };
-      } else {
-        const errorData = await response.json();
-        return {
-          success: false,
-          error: errorData.error || "Invalid credentials",
-        };
-      }
-    } catch (err) {
-      console.error("Login error:", err);
-      return {
-        success: false,
-        error: "Something went wrong. Please try again.",
-      };
+  username: string,
+  password: string,
+  csrfToken: string
+): Promise<{ success: boolean; data?: any; error?: string }> => {
+  try {
+    const response = await fetch(`${API_URL}/login/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken,
+      },
+      body: JSON.stringify({ username, password }),
+      credentials: "include",
+    });
+
+    if (response.ok) {
+      const userData = await response.json();
+      return { success: true, data: userData };
     }
+    
+    const errorData = await response.json();
+    return { success: false, error: errorData.error || "Invalid credentials" };
+  } catch (err) {
+    console.error("Login error:", err);
+    return { success: false, error: "Something went wrong. Please try again." };
+  }
+};
+
+export const registerUser = async (formData: {
+  username: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+}): Promise<{ success: boolean; data?: any; error?: string; autoLoginSuccess?: boolean }> => {
+  try {
+    // First fetch to ensure we have a fresh CSRF token
+    await fetch(`${API_URL}/`, { credentials: "include" });
+    const csrfToken = getCsrfFromCookie();
+    
+    const response = await fetch(`${API_URL}/register/`, {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken || ""
+      },
+      body: JSON.stringify(formData),
+      credentials: "include", 
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      return { success: false, error: data.error || "Не вдалося зареєструватися" };
+    }
+
+    // Get a fresh CSRF token for login
+    await fetch(`${API_URL}/`, { credentials: "include" });
+    const loginCsrfToken = getCsrfFromCookie();
+    if (!loginCsrfToken) {
+      return { success: true, data, autoLoginSuccess: false };
+    }
+    
+    // Attempt automatic login after successful registration
+    const loginResult = await loginUser(formData.username, formData.password, loginCsrfToken);
+    
+    // Return full user data from login for state update
+    return { 
+      success: true,
+      autoLoginSuccess: loginResult.success,
+      data: loginResult.data || data,  // Prioritize login data for user state
+      error: loginResult.success ? undefined : loginResult.error
+    };
+  } catch (error) {
+    console.error("Registration error:", error);
+    return { success: false, error: "Помилка реєстрації" };
+  }
 };
 
 
@@ -259,37 +300,6 @@ export const updateCaptive = async (
     } catch (error) {
       console.error("Update error:", error);
       return { success: false, error: "Помилка оновлення запису" };
-    }
-};
-
-
-export const registerUser = async (formData: {
-    username: string;
-    password: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-  }): Promise<{ success: boolean; data?: any; error?: string }> => {
-    try {
-      const response = await fetch(`${API_URL}/register/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-  
-      const data = await response.json();
-  
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Не вдалося зареєструватися",
-        };
-      }
-  
-      return { success: true, data };
-    } catch (error) {
-      console.error("Registration error:", error);
-      return { success: false, error: "Помилка реєстрації" };
     }
 };
 

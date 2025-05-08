@@ -72,12 +72,15 @@ const App: React.FC = () => {
                   >
                     <Card className="h-full bg-emerald-800/50 hover:bg-emerald-700/50 text-white shadow-lg transition-all duration-300 border-0 backdrop-blur-sm">
                       <CardContent className="flex flex-col justify-center items-center h-full text-center p-8">
-                        <h2 className="text-3xl font-semibold mb-4">
-                          Розшукувані особи
-                        </h2>
-                        <p className="text-lg">
-                          Переглянути список розшукуваних або додати особу
-                        </p>
+                      <h2 className="text-3xl font-semibold mb-4">
+                        Розшук
+                      </h2>
+                      <p className="text-lg">
+                        Переглянути список зниклих безвісти або додати нову особу
+                      </p>
+                      <p className="text-base text-emerald-400/80 mt-2">
+                        Використовуйте цю вкладку, якщо ви шукаєте людину, яка зникла. Тут можна перевірити, чи вже хтось шукає цю особу, або створити нову заявку про зникнення.
+                      </p>
                       </CardContent>
                     </Card>
                   </Link>
@@ -87,12 +90,15 @@ const App: React.FC = () => {
                   >
                     <Card className="h-full bg-emerald-800/50 hover:bg-emerald-700/50 text-white shadow-lg transition-all duration-300 border-0 backdrop-blur-sm">
                       <CardContent className="flex flex-col justify-center items-center h-full text-center p-8">
-                        <h2 className="text-3xl font-semibold mb-4">
-                          Є інформація
-                        </h2>
-                        <p className="text-lg">
-                          Переглянути список осіб, про яких маються дані, або додати особу
-                        </p>
+                      <h2 className="text-3xl font-semibold mb-4">
+                        Є інформація
+                      </h2>
+                      <p className="text-lg">
+                        Переглянути осіб, про яких зібрано дані, або додати нову інформацію
+                      </p>
+                      <p className="text-base text-emerald-400/80 mt-2">
+                        Ця вкладка для тих, хто має будь-яку інформацію про людину — наприклад, бачив її, має фото або знає місце перебування. Ви можете додати ці дані, навіть якщо особа ще не значиться серед зниклих.
+                      </p>
                       </CardContent>
                     </Card>
                   </Link>
@@ -106,7 +112,7 @@ const App: React.FC = () => {
               path="/login"
               element={<Login onLoginSuccess={handleLoginSuccess} />}
             />
-            <Route path="/register" element={<Register />} />
+            <Route path="/register" element={<Register onRegisterSuccess={handleLoginSuccess} />} />
             <Route path="/settings" element={<UserSettings user={user} refreshUser={refreshUser} />} />
             <Route path="/searching/:id" element={<CaptiveDetails user={user} />} />
             <Route path="/informated/:id" element={<CaptiveDetails user={user} />} />

@@ -5,8 +5,19 @@ import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
 import { X } from "lucide-react";
 import { registerUser } from "../config/api";
+import { updateCsrfToken } from "../csrf";
 
-const Register = () => {
+interface User {
+  id: number;
+  username: string;
+  email: string;
+}
+
+interface RegisterProps {
+  onRegisterSuccess: (user: User) => void;
+}
+
+const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
     const [formData, setFormData] = useState({
         username: "",
         password: "",
@@ -21,6 +32,7 @@ const Register = () => {
         message: string;
     } | null>(null);
     
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,30 +45,38 @@ const Register = () => {
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (formData.password !== formData.confirmPassword) {
-            showNotification('error', 'Паролі не співпадають');
-            return;
-        }
+      e.preventDefault();
+      if (formData.password !== formData.confirmPassword) {
+        showNotification('error', 'Паролі не співпадають');
+        return;
+      }
+      setLoading(true);
 
-        try {                
-            const response = await registerUser({
-                username: formData.username,
-                password: formData.password,
-                first_name: formData.first_name,
-                last_name: formData.last_name,
-                email: formData.email,
-            });
+      try {                
+        const response = await registerUser({
+          username: formData.username,
+          password: formData.password,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          email: formData.email,
+        });
 
-            if (response.success) {
-                showNotification('success', 'Реєстрація успішна! Перенаправлення на сторінку входу...');
-                setTimeout(() => navigate("/login"), 2000);
-            } else {
-                showNotification('error', `Помилка реєстрації: ${response.error || 'Щось пішло не так'}`);
-            }
-        } catch (error) {
-            showNotification('error', "Помилка з'єднання з сервером");
+        if (response.success) {
+          showNotification('success', 'Реєстрація успішна! Перенаправлення на головну сторінку...');
+          updateCsrfToken();
+          if (response.data) {
+            onRegisterSuccess(response.data);
+          }
+          
+          setTimeout(() => navigate("/"), 2000);
+        } else {
+          showNotification('error', `Помилка реєстрації: ${response.error || 'Щось пішло не так'}`);
         }
+      } catch {
+        showNotification('error', "Помилка з'єднання з сервером");
+      } finally {
+        setLoading(false);
+      }
     };
 
     return (
@@ -68,7 +88,7 @@ const Register = () => {
                   notification.type === "error"
                     ? "border-red-500 bg-red-50"
                     : "border-green-500 bg-green-50"
-                } relative`}
+                } relative shadow-lg transition-all duration-300 ease-in-out`}
               >
                 <AlertDescription
                   className={`${
@@ -81,7 +101,7 @@ const Register = () => {
                 </AlertDescription>
                 <button
                   onClick={() => setNotification(null)}
-                  className="absolute top-2 right-2"
+                  className="absolute top-2 right-2 hover:bg-green-500 rounded-full p-1 transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -104,6 +124,7 @@ const Register = () => {
               value={formData.first_name}
               onChange={handleChange}
               required
+              disabled={loading}
               className="mb-4"
             />
             <Input
@@ -113,6 +134,7 @@ const Register = () => {
               value={formData.last_name}
               onChange={handleChange}
               required
+              disabled={loading}
               className="mb-4"
             />
             <Input
@@ -122,15 +144,17 @@ const Register = () => {
               value={formData.email}
               onChange={handleChange}
               required
+              disabled={loading}
               className="mb-4"
             />
             <Input
               type="text"
               name="username"
-              placeholder="Ім'я користувача"
+              placeholder="Логін (Латиницею)"
               value={formData.username}
               onChange={handleChange}
               required
+              disabled={loading}
               className="mb-4"
             />
             <Input
@@ -140,6 +164,7 @@ const Register = () => {
               value={formData.password}
               onChange={handleChange}
               required
+              disabled={loading}
               className="mb-4"
             />
             <Input
@@ -149,14 +174,42 @@ const Register = () => {
               value={formData.confirmPassword}
               onChange={handleChange}
               required
+              disabled={loading}
               className="mb-4"
             />
       
             <Button
               type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-700 border-0"
+              className={`w-full ${loading ? "bg-emerald-700" : "bg-emerald-600 hover:bg-emerald-700"} border-0`}
+              disabled={loading}
             >
-              Зареєструватися
+              {loading ? (
+                <span className="flex justify-center items-center">
+                  <svg
+                    className="animate-spin h-5 w-5 mr-2 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8z"
+                    ></path>
+                  </svg>
+                  Завантаження...
+                </span>
+              ) : (
+                "Зареєструватися"
+              )}
             </Button>
           </form>
         </div>
