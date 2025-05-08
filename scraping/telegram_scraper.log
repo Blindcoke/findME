@@ -1,0 +1,25 @@
+2025-05-07 00:00:11,145 - INFO - Connected to the database successfully
+2025-05-07 00:00:11,146 - INFO - Connecting to 149.154.167.51:443/TcpFull...
+2025-05-07 00:00:11,160 - INFO - Connection to 149.154.167.51:443/TcpFull complete!
+2025-05-07 00:00:11,281 - INFO - Connected to Telegram. Scraping channel: cfddffhu4rt
+2025-05-07 00:00:11,310 - ERROR - Unexpected error in scrape_channel: Telegram_Channel user not found in auth_user table
+2025-05-07 00:00:11,310 - INFO - Disconnecting from 149.154.167.51:443/TcpFull...
+2025-05-07 00:00:11,311 - INFO - Disconnection from 149.154.167.51:443/TcpFull complete!
+2025-05-07 00:00:11,317 - INFO - Database connection closed
+2025-05-08 00:00:12,290 - INFO - Connected to the database successfully
+2025-05-08 00:00:12,291 - INFO - Connecting to 149.154.167.51:443/TcpFull...
+2025-05-08 00:00:12,306 - INFO - Connection to 149.154.167.51:443/TcpFull complete!
+2025-05-08 00:00:12,425 - INFO - Connected to Telegram. Scraping channel: cfddffhu4rt
+2025-05-08 00:00:14,252 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-08 00:00:15,003 - INFO - Skipping message - no name found.
+2025-05-08 00:00:15,687 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-08 00:00:16,673 - INFO - Created new record without photo: Балахтар Павло
+2025-05-08 00:00:17,593 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-08 00:00:18,965 - INFO - Created new record without photo: Мойса Олександр
+2025-05-08 00:00:19,618 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-08 00:00:20,652 - INFO - Created new record without photo: Грищенко Руслан Юрійович
+2025-05-08 00:00:21,732 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-08 00:00:22,262 - INFO - Created new record without photo: Гавриленко Максим Сергійович
+2025-05-08 00:00:22,262 - INFO - Disconnecting from 149.154.167.51:443/TcpFull...
+2025-05-08 00:00:22,263 - INFO - Disconnection from 149.154.167.51:443/TcpFull complete!
+2025-05-08 00:00:22,268 - INFO - Database connection closed

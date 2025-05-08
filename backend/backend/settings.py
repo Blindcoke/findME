@@ -22,20 +22,23 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR.parent / "data" / "media"
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-6&8qk=ki1$%yvq5ul6hn9xajfvk@j1x=woo#21ou=z0ez^v!@c"
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY", "django-insecure-6&8qk=ki1$%yvq5ul6hn9xajfvk@j1x=woo#21ou=z0ez^v!@c"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = [
+    "findme.co.ua",
+    "www.findme.co.ua",
+    "localhost",
+    "127.0.0.1",
+]
 
 # Application definition
 
@@ -65,15 +68,28 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-CORS_ALLOWED_ORIGINS = [
+CSRF_TRUSTED_ORIGINS = [
+    "https://findme.co.ua",
+    "https://www.findme.co.ua",
+    "http://findme.co.ua",
+    "http://www.findme.co.ua",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://157.230.115.73",
+    "https://157.230.115.73",
 ]
 
-CSRF_TRUSTED_ORIGINS = [
+CORS_ALLOWED_ORIGINS = [
+    "https://findme.co.ua",
+    "https://www.findme.co.ua",
+    "http://findme.co.ua",
+    "http://www.findme.co.ua",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://157.230.115.73",
+    "https://157.230.115.73",
 ]
+
 CORS_ALLOW_CREDENTIALS = True
 ROOT_URLCONF = "backend.urls"
 
@@ -144,20 +160,74 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
+STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-STATIC_URL = "static/"
-
-STATICFILES_DIRS = [
-    BASE_DIR / 'closed_project_frontend',
-]
+# Media files
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR.parent / "data" / "media"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",  # Allow public access
     ],
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
 }
+
+# Production security settings
+if not DEBUG:
+    # Security settings for production
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
+    # Static files with WhiteNoise
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# Logging configuration
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+        "file": {
+            "level": "ERROR",
+            "class": "logging.FileHandler",
+            "filename": os.path.join(BASE_DIR.parent, "logs", "django-errors.log"),
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console", "file"],
+            "level": os.getenv("DJANGO_LOG_LEVEL", "ERROR"),
+            "propagate": True,
+        },
+    },
+}
+
+# Make sure the logs directory exists
+os.makedirs(os.path.join(BASE_DIR.parent, "logs"), exist_ok=True)
