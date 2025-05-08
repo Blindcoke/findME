@@ -193,16 +193,27 @@ const Header: React.FC<HeaderProps> = ({ user, isAuthenticated, onLogout }) => {
         </Link>
 
         {isHomePage && (
-          <Link
-            to="/archive"
-            className="group flex items-center gap-2 px-6 py-3 bg-emerald-800/50 hover:bg-emerald-700/50 rounded-xl text-white transition-all duration-300 backdrop-blur-sm shadow-lg hover:shadow-emerald-700/25 hover:text-white"
-          >
-            <Archive
-              size={20}
-              className="group-hover:scale-110 transition-transform"
-            />
-            <span className="font-medium">Архіви</span>
-          </Link>
+            <>
+            <p className="text-center text-white text-base max-w-xxl md:text-lg leading-relaxed">
+            Цей застосунок допомагає знаходити людей, які зникли під час війни в Україні, 
+            а також зберігати дані про тих, хто вже зустрівся з рідними або, на жаль, загинув. 
+            <span className="block mt-2 text-emerald-300 max-w-xxl text-sm italic">
+              Розроблено як частина дипломної роботи з метою підтримки пошукових ініціатив.
+            </span>
+            </p>
+
+            <Link
+              to="/archive"
+              title="Тут зберігаються дані про людей, які загинули або були знайдені — і вже не потребують пошуку"
+              className="group flex items-center gap-2 px-6 py-3 bg-emerald-800/50 hover:bg-emerald-700/50 rounded-xl text-white transition-all duration-300 backdrop-blur-sm shadow-lg hover:shadow-emerald-700/25 hover:text-white"
+            >
+              <Archive
+                size={20}
+                className="group-hover:scale-110 transition-transform"
+              />
+              <span className="font-medium">Архіви</span>
+            </Link>
+          </>
         )}
       </div>
     </div>

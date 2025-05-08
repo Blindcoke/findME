@@ -46,11 +46,11 @@ export const CaptiveCard = ({ captive }: CaptiveCardProps) => {
                     </span>
                 ) : captive.status === 'deceased' ? (
                     <span className="px-3 py-1 bg-gradient-to-r from-gray-700/80 to-red-900/80 rounded-full text-sm font-medium text-white shadow-md truncate">
-                        Помер
+                        Загинув(-ла)
                     </span>
                 ) : captive.status === 'reunited' ? (
                     <span className="px-3 py-1 bg-gradient-to-r from-blue-500/80 to-cyan-600/80 rounded-full text-sm font-medium text-white shadow-md truncate">
-                        Возз'єднано
+                        Зустрів(-ла) рідних
                     </span>
                 ) : null}
 
