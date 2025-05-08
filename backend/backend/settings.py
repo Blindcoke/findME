@@ -183,7 +183,6 @@ REST_FRAMEWORK = {
 if not DEBUG:
     # Security settings for production
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000  # 1 year
@@ -192,7 +191,7 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
 
     # Static files with WhiteNoise
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 # Logging configuration
 LOGGING = {
