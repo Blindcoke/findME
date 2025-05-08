@@ -28,6 +28,8 @@ async def create_embedding(text: str) -> list:
 
 async def create_photo_embedding(image_bytes: bytes) -> list[float]:
     with Image.open(io.BytesIO(image_bytes)) as img:
+        if img.mode != "RGB":
+            img = img.convert("RGB")
         with tempfile.NamedTemporaryFile(suffix=".jpg") as tmp:
             img.save(tmp.name)
             result = DeepFace.represent(
