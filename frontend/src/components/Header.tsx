@@ -194,7 +194,7 @@ const Header: React.FC<HeaderProps> = ({ user, isAuthenticated, onLogout }) => {
 
         {isHomePage && (
             <>
-            <p className="text-center text-white text-base max-w-xxl md:text-lg leading-relaxed">
+            <p className="text-center mb-6 text-white text-base max-w-xxl md:text-lg leading-relaxed">
             Цей застосунок допомагає знаходити людей, які зникли під час війни в Україні, 
             а також зберігати дані про тих, хто вже зустрівся з рідними або, на жаль, загинув. 
             <span className="block mt-2 text-emerald-300 max-w-xxl text-sm italic">
