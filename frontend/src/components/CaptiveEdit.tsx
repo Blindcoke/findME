@@ -221,7 +221,7 @@ function CaptiveEdit({ user: currentUser }: CaptiveEditProps) {
             toast({
                 title: "Запис оновлено",
                 description: "Інформацію збережено успішно",
-                variant: "success"
+                variant: "default"
             });
             
             navigate(getRedirectUrl(savedData.id, savedData.status));
