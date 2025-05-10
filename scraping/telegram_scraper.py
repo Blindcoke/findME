@@ -194,9 +194,9 @@ class TelegramScraper:
 
             async for message in self.client.iter_messages(
                 channel,
-                offset_date=datetime.now(tz=timezone.utc) - timedelta(hours=15),
+                offset_date=datetime.now(tz=timezone.utc) - timedelta(hours=24),
                 reverse=True,
-                limit=5,
+                limit=30,
             ):
                 try:
                     await self.process_message(message, telegram_user_id)
